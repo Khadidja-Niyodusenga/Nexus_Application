@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'FeedbackScreen.dart';
+import 'NotificationScreen.dart';
+import 'TrackProgressScreen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -50,11 +53,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ).then((value) {
                 if (value != null) {
-                  // Handle menu click
                   if (value == "signout") {
-                    // Sign out code here
+                    // Your sign out logic here
                   } else if (value == "track") {
-                    // Navigate to track progress page
+                    // Navigate to Track Progress screen
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const TrackProgressScreen()));
+                  } else if (value == "notif") {
+                    // Navigate to Notification screen
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const NotificationScreen()));
+                  } else if (value == "feedback") {
+                    // Navigate to Feedback screen
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const FeedbackScreen()));
                   }
                 }
               });
@@ -86,11 +104,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ),
-        actions: const [
-          Icon(Icons.notifications, color: Colors.blue),
-          SizedBox(width: 10),
-          Icon(Icons.chat_bubble, color: Colors.blue),
-          SizedBox(width: 10),
+        actions: [
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const NotificationScreen()),
+              );
+            },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.0),
+              child: Icon(Icons.notifications, color: Colors.blue),
+            ),
+          ),
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const FeedbackScreen()),
+              );
+            },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.0),
+              child: Icon(Icons.chat_bubble, color: Colors.blue),
+            ),
+          ),
         ],
       ),
       body: _currentIndex == 0
@@ -293,6 +332,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Text(
         '${bottomLabels[index]} page not implemented yet',
         style: const TextStyle(fontSize: 24),
+      ),
+    );
+  }
+}
+
+class NotificationScreen extends StatelessWidget {
+  const NotificationScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Notifications')),
+      body: const Center(child: Text('Notification Screen Content')),
+    );
+  }
+}
+
+class FeedbackScreen extends StatelessWidget {
+  const FeedbackScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('User Feedback')),
+      body: const Center(child: Text('Feedback Screen Content')),
+    );
+  }
+}
+
+class TrackProgressScreen extends StatelessWidget {
+  const TrackProgressScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Track Progress')),
+      body: const Center(
+        child: Text('Track Progress Screen Content'),
       ),
     );
   }

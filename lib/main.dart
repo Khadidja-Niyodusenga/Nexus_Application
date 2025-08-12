@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'screens/dashboard_screen.dart';
+
+import 'screens/LoginScreen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -91,7 +92,7 @@ class WelcomePage extends StatelessWidget {
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) =>
-                                              const DashboardScreen(),
+                                              const LoginScreen(),
                                         ),
                                       );
                                     },
