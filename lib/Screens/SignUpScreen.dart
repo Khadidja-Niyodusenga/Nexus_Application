@@ -121,6 +121,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: ElevatedButton(
                     onPressed: agreed
                         ? () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const LoginScreen()),
+                            );
                             // TODO: sign up logic here
                           }
                         : null,

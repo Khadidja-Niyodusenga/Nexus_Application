@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:new_nexus_application/screens/LoginScreen.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'FeedbackScreen.dart';
 import 'NotificationScreen.dart';
@@ -54,6 +55,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ).then((value) {
                 if (value != null) {
                   if (value == "signout") {
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()));
                     // Your sign out logic here
                   } else if (value == "track") {
                     // Navigate to Track Progress screen
@@ -66,7 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const NotificationScreen()));
+                            builder: (_) => NotificationScreen()));
                   } else if (value == "feedback") {
                     // Navigate to Feedback screen
                     Navigator.push(
@@ -109,8 +112,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (context) => const NotificationScreen()),
+                MaterialPageRoute(builder: (context) => NotificationScreen()),
               );
             },
             child: const Padding(
@@ -332,44 +334,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Text(
         '${bottomLabels[index]} page not implemented yet',
         style: const TextStyle(fontSize: 24),
-      ),
-    );
-  }
-}
-
-class NotificationScreen extends StatelessWidget {
-  const NotificationScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
-      body: const Center(child: Text('Notification Screen Content')),
-    );
-  }
-}
-
-class FeedbackScreen extends StatelessWidget {
-  const FeedbackScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('User Feedback')),
-      body: const Center(child: Text('Feedback Screen Content')),
-    );
-  }
-}
-
-class TrackProgressScreen extends StatelessWidget {
-  const TrackProgressScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Track Progress')),
-      body: const Center(
-        child: Text('Track Progress Screen Content'),
       ),
     );
   }
