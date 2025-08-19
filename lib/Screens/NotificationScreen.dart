@@ -76,10 +76,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
       appBar: AppBar(
         title: const Text(
           "Notifications",
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        backgroundColor: Colors.grey.shade300,
+        backgroundColor: Colors.grey[300], // background grey
+        foregroundColor: Colors.black, // makes title + icons black
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: ListView(
         children: grouped.entries.map((entry) {
@@ -203,69 +210,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 }
 
-// class NotificationDetailScreen extends StatelessWidget {
-//   final NotificationItem notification;
-
-//   const NotificationDetailScreen({super.key, required this.notification});
-
-//   String formatTime(DateTime dateTime) {
-//     return DateFormat.Hm().format(dateTime.toLocal());
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text(
-//           "Notification Detail",
-//           style: TextStyle(fontWeight: FontWeight.bold),
-//         ),
-//         backgroundColor: Colors.grey.shade300,
-//         elevation: 0,
-//       ),
-//       body: SingleChildScrollView(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             // Message container
-//             Container(
-//               padding: const EdgeInsets.all(12),
-//               decoration: BoxDecoration(
-//                 color: Colors.grey.shade200,
-//                 borderRadius: BorderRadius.circular(12),
-//               ),
-//               child: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   Text(
-//                     notification.title,
-//                     style: const TextStyle(
-//                         fontWeight: FontWeight.bold, fontSize: 16),
-//                   ),
-//                   const SizedBox(height: 12),
-//                   Text(
-//                     notification.message,
-//                     style: const TextStyle(fontSize: 16, color: Colors.black87),
-//                   ),
-//                 ],
-//               ),
-//             ),
-//             const SizedBox(height: 6),
-//             // Time below container, left-aligned
-//             Text(
-//               formatTime(notification.dateTime),
-//               style: const TextStyle(
-//                   fontWeight: FontWeight.normal,
-//                   fontSize: 12,
-//                   color: Colors.black),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
 class NotificationDetailScreen extends StatelessWidget {
   final NotificationItem notification;
 
@@ -284,8 +228,13 @@ class NotificationDetailScreen extends StatelessWidget {
           notification.type,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.grey.shade300,
+        backgroundColor: Colors.grey[300], // ✅ Same as Feedback screen
+        foregroundColor: Colors.black,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

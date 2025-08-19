@@ -65,6 +65,26 @@ flutter:
     - assets/menu.png
     - assets/welcome2.png
     - assets/image.png
+    - assets/sdg1.jpeg
+    - assets/sdg2.jpeg
+    - assets/sdg3.jpeg
+    - assets/sdg4.png
+    - assets/sdg5.png
+    - assets/sdg6.png
+    - assets/sdg7.png
+    - assets/sdg8.png
+    - assets/sdg9.png
+    - assets/sdg10.png
+    - assets/sdg11.png
+    - assets/sdg12.png
+    - assets/sdg13.png
+    - assets/sdg14.png
+    - assets/sdg15.png
+    - assets/sdg16.png
+    - assets/sdg17.png
+    - assets/photo1.png
+    - assets/photo2.png
+    - assets/photo3.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

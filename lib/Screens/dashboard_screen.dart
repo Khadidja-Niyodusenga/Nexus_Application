@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:new_nexus_application/screens/LoginScreen.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'FeedbackScreen.dart';
 import 'NotificationScreen.dart';
 import 'TrackProgressScreen.dart';
+import 'LearnScreen.dart';
+import 'UpdatesScreen.dart';
+import 'ProfileScreen.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,9 +19,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
 
   final PageController _pageController = PageController();
-  int _pageViewIndex = 0; // For the PageView inside Home content
+  int _pageViewIndex = 0; // For the PageView inside Home
 
   final List<String> bottomLabels = ["Home", "Learn", "Updates", "Profile"];
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,49 +43,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
               showMenu(
                 context: context,
                 position: const RelativeRect.fromLTRB(0, 80, 0, 0),
-                items: [
-                  const PopupMenuItem(
-                    value: "track",
-                    child: Text("Track Progress"),
-                  ),
-                  const PopupMenuItem(
-                    value: "feedback",
-                    child: Text("User Feedback"),
-                  ),
-                  const PopupMenuItem(
-                    value: "notif",
-                    child: Text("Notification"),
-                  ),
-                  const PopupMenuItem(
-                    value: "signout",
-                    child: Text("Sign Out"),
-                  ),
+                items: const [
+                  PopupMenuItem(value: "track", child: Text("Track Progress")),
+                  PopupMenuItem(
+                      value: "feedback", child: Text("User Feedback")),
+                  PopupMenuItem(value: "notif", child: Text("Notification")),
+                  PopupMenuItem(value: "signout", child: Text("Sign Out")),
                 ],
               ).then((value) {
-                if (value != null) {
-                  if (value == "signout") {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()));
-                    // Your sign out logic here
-                  } else if (value == "track") {
-                    // Navigate to Track Progress screen
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const TrackProgressScreen()));
-                  } else if (value == "notif") {
-                    // Navigate to Notification screen
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => NotificationScreen()));
-                  } else if (value == "feedback") {
-                    // Navigate to Feedback screen
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const FeedbackScreen()));
-                  }
+                if (value == "signout") {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()));
+                } else if (value == "track") {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const TrackProgressScreen()));
+                } else if (value == "notif") {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => NotificationScreen()));
+                } else if (value == "feedback") {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const FeedbackScreen()));
                 }
               });
             },
@@ -96,15 +86,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ),
-        title: Transform.translate(
-          offset: const Offset(-13, 1),
-          child: const Text(
-            "NEXUS APP",
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
+        title: const Text(
+          "NEXUS APP",
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
         ),
         actions: [
@@ -112,7 +99,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => NotificationScreen()),
+                MaterialPageRoute(builder: (_) => NotificationScreen()),
               );
             },
             child: const Padding(
@@ -124,7 +111,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const FeedbackScreen()),
+                MaterialPageRoute(builder: (_) => const FeedbackScreen()),
               );
             },
             child: const Padding(
@@ -134,17 +121,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: _currentIndex == 0
-          ? homeContentWidget()
-          : otherContentWidget(_currentIndex),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          homeContentWidget(),
+          const LearnScreen(),
+          const UpdatesScreen(),
+          otherContentWidget("Updates"),
+          otherContentWidget("Profile"),
+        ],
+      ),
       bottomNavigationBar: Container(
-        color: const Color(0xFF3B9DD2), // Blue background
+        color: const Color(0xFF3B9DD2),
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: List.generate(bottomLabels.length, (index) {
             final isSelected = _currentIndex == index;
-
             return Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -162,18 +155,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onPressed: () {
                     setState(() {
                       _currentIndex = index;
-                      if (_currentIndex == 0 && _pageController.hasClients) {
-                        // Reset internal pageview index when returning Home
-                        _pageController.jumpToPage(0);
-                        _pageViewIndex = 0;
-                      }
                     });
                   },
                   child: Text(
                     bottomLabels[index],
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -230,81 +216,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: Colors.grey[200],
             padding: const EdgeInsets.all(20),
             height: 200,
-            child: Column(
+            child: Row(
               children: [
                 Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: PageView(
-                          controller: _pageController,
-                          onPageChanged: (index) {
-                            setState(() {
-                              _pageViewIndex = index;
-                            });
-                          },
-                          children: const [
-                            Center(
-                              child: Text(
-                                "The United Nations is a global organization that works to keep peace, protect human rights, fight poverty, and build a better future for all.",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontFamily: 'Times New Roman',
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            Center(
-                              child: Text(
-                                "Second text: Promoting sustainable development and protecting the environment worldwide.",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontFamily: 'Times New Roman',
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            Center(
-                              child: Text(
-                                "Third text: Fostering international cooperation to solve global challenges together.",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontFamily: 'Times New Roman',
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _pageViewIndex = index;
+                      });
+                    },
+                    children: const [
+                      Center(
+                        child: Text(
+                          "The United Nations is a global organization that works to keep peace, protect human rights, fight poverty, and build a better future for all.",
+                          style: TextStyle(
+                              fontSize: 16, fontFamily: 'Times New Roman'),
+                          textAlign: TextAlign.center,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () {
-                          final nextPage = (_pageViewIndex + 1) % 3;
-                          _pageController.animateToPage(
-                            nextPage,
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                          );
-                        },
-                        child: const Icon(
-                          Icons.arrow_forward_ios,
-                          color: Colors.blueGrey,
-                          size: 20,
+                      Center(
+                        child: Text(
+                          "Second text: Promoting sustainable development and protecting the environment worldwide.",
+                          style: TextStyle(
+                              fontSize: 16, fontFamily: 'Times New Roman'),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      Center(
+                        child: Text(
+                          "Third text: Fostering international cooperation to solve global challenges together.",
+                          style: TextStyle(
+                              fontSize: 16, fontFamily: 'Times New Roman'),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                SmoothPageIndicator(
-                  controller: _pageController,
-                  count: 3,
-                  effect: const WormEffect(
-                    activeDotColor: Colors.blueGrey,
-                    dotHeight: 10,
-                    dotWidth: 10,
-                    spacing: 8,
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    if (_pageController.hasClients) {
+                      final nextPage = (_pageViewIndex + 1) % 3;
+                      _pageController.animateToPage(
+                        nextPage,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
+                  child: const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.blueGrey,
+                    size: 20,
                   ),
                 ),
               ],
@@ -329,10 +294,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget otherContentWidget(int index) {
+  Widget otherContentWidget(String label) {
     return Center(
       child: Text(
-        '${bottomLabels[index]} page not implemented yet',
+        "$label page not implemented yet",
         style: const TextStyle(fontSize: 24),
       ),
     );
