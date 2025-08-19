@@ -127,6 +127,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           homeContentWidget(),
           const LearnScreen(),
           const UpdatesScreen(),
+          const ProfileScreen(),
           otherContentWidget("Updates"),
           otherContentWidget("Profile"),
         ],
