@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-=======
-
-
-
-
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'dashboard_screen.dart';
