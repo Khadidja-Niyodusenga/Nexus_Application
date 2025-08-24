@@ -10,7 +10,7 @@ class UpdatesScreen extends StatefulWidget {
 }
 
 class _UpdatesScreenState extends State<UpdatesScreen> {
-  int _currentIndex = 1;
+  final int _currentIndex = 1;
 
   // Track opened SDGs using a Set (prevents duplicates)
   final Set<int> openedSDGs = {};

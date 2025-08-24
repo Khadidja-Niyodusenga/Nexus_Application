@@ -1,7 +1,9 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.nexus_application">
+
     <application
-        android:label="new_nexus_application"
-        android:name="${applicationName}"
+        android:label="Nexus"
+        
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

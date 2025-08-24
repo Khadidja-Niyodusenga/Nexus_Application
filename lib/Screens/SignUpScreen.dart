@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import 'package:new_nexus_application/Screens/LoginScreen.dart';
+import 'auth_service.dart';
+import 'LoginScreen.dart';
+import 'dashboard_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -11,6 +13,63 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   bool agreed = false;
+  bool _loading = false;
+
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  final AuthService _authService = AuthService();
+
+  Future<void> _signUpWithUsername() async {
+    if (!agreed) return;
+
+    setState(() => _loading = true);
+
+    try {
+      await _authService.signUpWithUsernameAndPassword(
+        _usernameController.text.trim(),
+        _passwordController.text.trim(),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Sign up successful!")),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _signUpWithGoogle() async {
+    setState(() => _loading = true);
+    try {
+      final user = await _authService.signInWithGoogle();
+      if (user != null) {
+        // After Google sign-in, you can also register the username/password
+        // if you want the user to also have normal login
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Google sign in successful!")),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,34 +97,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const Text(
                   'NEXUS APP',
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 28,
-                    fontFamily: 'Times New Roman',
-                  ),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 28,
+                      fontFamily: 'Times New Roman'),
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'SignUp Here!',
+                  'Sign up with username and password or Google',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 18,
-                    fontFamily: 'Times New Roman',
-                    color: Colors.black,
-                  ),
+                      fontSize: 16,
+                      fontFamily: 'Times New Roman',
+                      color: Colors.black),
                 ),
                 const SizedBox(height: 20),
 
-                // Email / Username
+                // Username only
                 TextField(
+                  controller: _usernameController,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: Colors.grey[300],
-                    hintText: 'Email or username',
+                    hintText: 'Username',
                     hintStyle: const TextStyle(color: Colors.grey),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide.none,
-                    ),
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none),
                     contentPadding: const EdgeInsets.symmetric(
                         vertical: 14, horizontal: 16),
                   ),
@@ -74,6 +131,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                 // Password
                 TextField(
+                  controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
                     filled: true,
@@ -81,17 +139,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     hintText: 'Password',
                     hintStyle: const TextStyle(color: Colors.grey),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide.none,
-                    ),
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none),
                     contentPadding: const EdgeInsets.symmetric(
                         vertical: 14, horizontal: 16),
                   ),
                 ),
-
                 const SizedBox(height: 12),
 
-                // Agree terms checkbox aligned left
+                // Agree terms checkbox
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -112,64 +168,51 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 12),
 
-                // Sign Up button - enabled only if agreed is true
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: agreed
-                        ? () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const LoginScreen()),
-                            );
-                            // TODO: sign up logic here
-                          }
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade400,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50),
+                // Sign Up button
+                _loading
+                    ? const CircularProgressIndicator()
+                    : SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: agreed ? _signUpWithUsername : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade400,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                          ),
+                          child: const Text(
+                            'Sign up',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Colors.white,
+                                fontFamily: 'Times New Roman'),
+                          ),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      'Sign up',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.white,
-                        fontFamily: 'Times New Roman',
-                      ),
-                    ),
-                  ),
-                ),
-
                 const SizedBox(height: 16),
 
                 // Google sign in button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: Google sign in logic here
-                    },
+                    onPressed: _signUpWithGoogle,
                     icon: Image.asset(
-                      'assets/image.png', // Your asset image path
+                      'assets/image.png',
                       height: 24,
                       width: 24,
                     ),
                     label: const Text(
                       'Sign in with Google',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        fontFamily: 'Times New Roman',
-                        color: Colors.white,
-                      ),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontFamily: 'Times New Roman',
+                          color: Colors.white),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green.shade400,
@@ -181,31 +224,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
 
-                // Bottom text: Already joined Sign in
+                // Already joined? Sign in
                 RichText(
                   text: TextSpan(
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontFamily: 'Times New Roman',
-                      color: Colors.black,
-                    ),
+                        fontSize: 16,
+                        fontFamily: 'Times New Roman',
+                        color: Colors.black),
                     children: [
-                      const TextSpan(text: 'Already joined  '),
+                      const TextSpan(text: 'Already joined? '),
                       TextSpan(
                         text: 'Sign in',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade400,
-                        ),
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade400),
                         recognizer: TapGestureRecognizer()
                           ..onTap = () {
-                            Navigator.push(
+                            Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                  builder: (context) => const LoginScreen()),
+                                  builder: (_) => const LoginScreen()),
                             );
                           },
                       ),

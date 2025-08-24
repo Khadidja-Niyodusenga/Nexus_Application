@@ -6,7 +6,7 @@ import 'TrackProgressScreen.dart';
 import 'LearnScreen.dart';
 import 'UpdatesScreen.dart';
 import 'ProfileScreen.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -52,8 +52,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ).then((value) {
                 if (value == "signout") {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen()));
+                  FirebaseAuth.instance.signOut(); // <-- Sign out the user
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false, // Removes all previous routes
+                  );
                 } else if (value == "track") {
                   Navigator.push(
                       context,

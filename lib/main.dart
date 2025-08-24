@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'Screens/LoginScreen.dart';
+import 'Screens/SignUpScreen.dart';
+import 'Screens/dashboard_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-import 'screens/LoginScreen.dart';
+import 'firebase_options.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -21,12 +30,39 @@ class MyApp extends StatelessWidget {
         ),
       ),
       home: const WelcomePage(),
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/signup': (context) => const SignUpScreen(),
+        '/dashboard': (context) =>
+            const DashboardScreen(), // you’ll create this later
+      },
     );
   }
 }
 
-class WelcomePage extends StatelessWidget {
+class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
+
+  @override
+  State<WelcomePage> createState() => _WelcomePageState();
+}
+
+class _WelcomePageState extends State<WelcomePage> {
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  void _checkLoginStatus() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && user.emailVerified) {
+      // Already signed in and verified
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,12 +80,10 @@ class WelcomePage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: 40),
-                Image.asset(
-                  "assets/logo.png",
-                  height: 120,
-                  width: MediaQuery.of(context).size.width,
-                  fit: BoxFit.fitHeight,
-                ),
+                Image.asset("assets/logo.png",
+                    height: 120,
+                    width: MediaQuery.of(context).size.width,
+                    fit: BoxFit.contain),
                 SizedBox(width: 20),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +92,7 @@ class WelcomePage extends StatelessWidget {
                       "assets/SDGwlcm.jpg",
                       height: 190,
                       width: MediaQuery.of(context).size.width,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                     ),
                     SizedBox(height: 20),
                     Row(
@@ -88,19 +122,12 @@ class WelcomePage extends StatelessWidget {
                                           0.15),
                                   ElevatedButton(
                                     onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const LoginScreen(),
-                                        ),
-                                      );
+                                      Navigator.pushNamed(context, '/login');
                                     },
                                     style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        foregroundColor: Colors
-                                            .black // Set button color to green
-                                        ),
+                                      backgroundColor: Colors.green,
+                                      foregroundColor: Colors.black,
+                                    ),
                                     child: const Text('Explore more  ->'),
                                   ),
                                 ],

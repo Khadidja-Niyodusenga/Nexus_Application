@@ -10,7 +10,7 @@ class LearnScreen extends StatefulWidget {
 }
 
 class _LearnScreenState extends State<LearnScreen> {
-  int _currentIndex = 1;
+  final int _currentIndex = 1;
   final Set<int> openedSDGs = {};
   final int totalSDGs = 17;
 
