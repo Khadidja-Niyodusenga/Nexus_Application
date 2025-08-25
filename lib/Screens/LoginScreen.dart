@@ -15,17 +15,82 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
+  bool _isObscure = true;
   bool _loading = false;
+
+  Future<void> _showForgetPasswordDialog() async {
+    final TextEditingController emailController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Password'),
+        content: TextField(
+          controller: emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            hintText: 'Enter your email',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context), // Close dialog
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final email = emailController.text.trim();
+              if (email.isEmpty) return;
+
+              try {
+                // Call AuthService to send password reset email
+                await AuthService().sendPasswordResetEmail(email);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Reset link sent to your email')),
+                );
+                Navigator.pop(context); // Close dialog
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(e.toString())),
+                );
+              }
+            },
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Login with username (email will be fetched internally)
   Future<void> _loginWithUsername() async {
+    String username = _usernameController.text.trim();
+    String password = _passwordController.text.trim();
+
+    // Validation before trying to login
+    if (username.isEmpty && password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter username and password")),
+      );
+      return;
+    } else if (username.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter username")),
+      );
+      return;
+    } else if (password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter password")),
+      );
+      return;
+    }
+
+    // If fields are filled, continue login
     setState(() => _loading = true);
     try {
-      bool success = await _authService.loginWithUsername(
-        _usernameController.text.trim(),
-        _passwordController.text.trim(),
-      );
+      bool success = await _authService.loginWithUsername(username, password);
 
       if (success) {
         Navigator.pushReplacement(
@@ -73,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
             width: 340,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFFFCF9F9),
+              color: const Color.fromARGB(255, 243, 241, 241),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
@@ -95,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Sign in with your username and password',
+                  'Welcome Back to Nexus App\n Sign in now!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 16,
@@ -124,24 +189,36 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Password
                 TextField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: _isObscure,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: Colors.grey[300],
                     hintText: 'Password',
                     hintStyle: const TextStyle(color: Colors.grey),
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none),
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
                     contentPadding: const EdgeInsets.symmetric(
                         vertical: 14, horizontal: 16),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isObscure ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isObscure = !_isObscure; // toggle visibility
+                        });
+                      },
+                    ),
                   ),
                 ),
+
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // TODO: implement forget password
+                      _showForgetPasswordDialog();
                     },
                     child: Text(
                       'Forget password',
@@ -187,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             width: 24,
                           ),
                           label: const Text(
-                            'Sign in with Google',
+                            'Continue with Google',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -211,7 +288,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontFamily: 'Times New Roman',
                         color: Colors.black),
                     children: [
-                      const TextSpan(text: 'New to Nexus '),
+                      const TextSpan(text: 'New to Nexus? '),
                       TextSpan(
                         text: 'Sign up',
                         style: TextStyle(

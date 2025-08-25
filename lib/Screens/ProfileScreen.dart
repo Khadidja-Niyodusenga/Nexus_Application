@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,9 +12,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'NEWUS APP',
+      title: 'Your Profile info',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.grey,
         scaffoldBackgroundColor: const Color(0xFFF5F5F5),
       ),
       home: const ProfileScreen(),
@@ -28,26 +30,76 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  String names = "Uwiduhaye Yvette";
-  String telephone = "0788996756";
-  String email = "yvetteuwi@gmail.com";
-  String address = "Kigali, Kicukiro";
+  String names = "";
+  String email = "";
+  String username = "";
+  String profilePicUrl = "";
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  User? user;
+
+  @override
+  void initState() {
+    super.initState();
+    user = _auth.currentUser;
+    _loadUserProfile();
+  }
+
+  void _loadUserProfile() async {
+    if (user != null) {
+      DocumentReference docRef =
+          _firestore.collection('normal_users').doc(user!.uid);
+
+      DocumentSnapshot doc = await docRef.get();
+
+      if (doc.exists) {
+        setState(() {
+          names = doc['name'] ?? '';
+          username = doc['username'] ?? '';
+          email = doc['email'] ?? '';
+          profilePicUrl = doc['profilePicture'] ?? '';
+        });
+      } else {
+        // Create default document if not exists
+        await docRef.set({
+          'names': '',
+          'username': '',
+          'email': user!.email ?? '',
+          'profilePicUrl': '',
+        });
+      }
+    }
+  }
+
+  void _updateUserProfile(
+      String newNames, String newUsername, String newEmail) async {
+    if (user != null) {
+      await _firestore.collection('normal_users').doc(user!.uid).update({
+        'name': newNames,
+        'username': newUsername,
+        'email': newEmail,
+        'profilePicture': profilePicUrl, // if you allow updating profile pic
+      });
+
+      setState(() {
+        names = newNames;
+        username = newUsername;
+        email = newEmail;
+      });
+    }
+  }
+
   void _showChangeProfileDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return ChangeProfileDialog(
           names: names,
-          telephone: telephone,
+          username: username,
           email: email,
-          address: address,
-          onSave: (newNames, newTelephone, newEmail, newAddress) {
-            setState(() {
-              names = newNames;
-              telephone = newTelephone;
-              email = newEmail;
-              address = newAddress;
-            });
+          onSave: (newNames, newUsername, newEmail) {
+            _updateUserProfile(newNames, newUsername, newEmail);
           },
         );
       },
@@ -59,68 +111,98 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          "NEWUS APP",
+          "Your Profile Info",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.blue,
+        backgroundColor: const Color.fromARGB(255, 206, 202, 202),
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              const Text(
-                "Your Profile info",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-              Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+      body: user == null
+          ? const Center(child: Text("No user signed in"))
+          : FutureBuilder<DocumentSnapshot>(
+              future:
+                  _firestore.collection('normal_users').doc(user!.uid).get(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return const Center(child: Text("No profile data found"));
+                }
+
+                var data = snapshot.data!.data() as Map<String, dynamic>;
+
+                names = data['name'] ?? '';
+                username = data['username'] ?? '';
+                email = data['email'] ?? '';
+
+                profilePicUrl = data['profilePicture'] ?? '';
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      _buildProfileInfoRow("Names:", names),
-                      const Divider(),
-                      _buildProfileInfoRow("Telephone:", telephone),
-                      const Divider(),
-                      _buildProfileInfoRow("Email or username:", email),
-                      const Divider(),
-                      _buildProfileInfoRow("Address:", address),
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundImage: profilePicUrl.isNotEmpty
+                            ? NetworkImage(profilePicUrl)
+                            : null,
+                        child: profilePicUrl.isEmpty
+                            ? const Icon(Icons.person, size: 50)
+                            : null,
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        "Profile picture",
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      const SizedBox(height: 20),
+                      Card(
+                        color: const Color.fromARGB(
+                            255, 243, 241, 241), // your background color
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              _buildProfileInfoRow("Names:", names),
+                              const Divider(),
+                              _buildProfileInfoRow("Username:", username),
+                              const Divider(),
+                              _buildProfileInfoRow("Email:", email),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: _showChangeProfileDialog,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 40, vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            "Change Profile",
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 30),
-              Center(
-                child: ElevatedButton(
-                  onPressed: _showChangeProfileDialog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 40, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    "Change Profile",
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+                );
+              },
+            ),
     );
   }
 
@@ -147,46 +229,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+// ------------------ CHANGE PROFILE DIALOG ------------------
+
 class ChangeProfileDialog extends StatefulWidget {
   final String names;
-  final String telephone;
+  final String username;
   final String email;
-  final String address;
-  final Function(String, String, String, String) onSave;
+
+  final Function(String, String, String) onSave;
 
   const ChangeProfileDialog({
     super.key,
     required this.names,
-    required this.telephone,
+    required this.username,
     required this.email,
-    required this.address,
     required this.onSave,
   });
+
   @override
   State<ChangeProfileDialog> createState() => _ChangeProfileDialogState();
 }
 
 class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
   late TextEditingController _namesController;
-  late TextEditingController _telephoneController;
+  late TextEditingController _usernameController;
   late TextEditingController _emailController;
-  late TextEditingController _addressController;
 
   @override
   void initState() {
     super.initState();
     _namesController = TextEditingController(text: widget.names);
-    _telephoneController = TextEditingController(text: widget.telephone);
+    _usernameController = TextEditingController(text: widget.username);
     _emailController = TextEditingController(text: widget.email);
-    _addressController = TextEditingController(text: widget.address);
   }
 
   @override
   void dispose() {
     _namesController.dispose();
-    _telephoneController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
-    _addressController.dispose();
+
     super.dispose();
   }
 
@@ -225,11 +307,9 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
               const SizedBox(height: 20),
               _buildTextField("Names", _namesController),
               const SizedBox(height: 15),
-              _buildTextField("Username", _emailController),
+              _buildTextField("Username", _usernameController),
               const SizedBox(height: 15),
-              _buildTextField("Telephone", _telephoneController),
-              const SizedBox(height: 15),
-              _buildTextField("Address", _addressController),
+              _buildTextField("Email", _emailController),
               const SizedBox(height: 25),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -248,9 +328,8 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
                     onPressed: () {
                       widget.onSave(
                         _namesController.text,
-                        _telephoneController.text,
+                        _usernameController.text,
                         _emailController.text,
-                        _addressController.text,
                       );
                       Navigator.of(context).pop();
                     },
@@ -269,15 +348,15 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller) {
+  Widget _buildTextField(String label, TextEditingController controller,
+      {bool obscure = false}) {
     return TextField(
       controller: controller,
+      obscureText: obscure,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      keyboardType:
-          label == "Telephone" ? TextInputType.phone : TextInputType.text,
       textInputAction: TextInputAction.next,
     );
   }

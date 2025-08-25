@@ -14,27 +14,42 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   bool agreed = false;
   bool _loading = false;
-
+  bool _isObscure = true;
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
 
   final AuthService _authService = AuthService();
 
   Future<void> _signUpWithUsername() async {
     if (!agreed) return;
 
+    String email = _emailController.text.trim();
+    String username = _usernameController.text.trim();
+    String password = _passwordController.text.trim();
+
+    if (email.isEmpty || username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields")),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
 
     try {
-      await _authService.signUpWithUsernameAndPassword(
-        _usernameController.text.trim(),
-        _passwordController.text.trim(),
+      // Call your AuthService
+      await AuthService().signUpWithUsernameAndPassword(
+        email,
+        username,
+        password,
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Sign up successful!")),
       );
 
+      // After signup, navigate to Dashboard or Login
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -81,7 +96,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             width: 340,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFFFCF9F9),
+              color: const Color.fromARGB(255, 243, 241, 241),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
@@ -103,7 +118,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Sign up with username and password or Google',
+                  'Sign Up Here!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 16,
@@ -128,23 +143,53 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
+// Email
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.grey[300],
+                    hintText: 'Email',
+                    hintStyle: const TextStyle(color: Colors.grey),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 16),
+                  ),
+                ),
+                const SizedBox(height: 12),
 
                 // Password
                 TextField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: _isObscure,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: Colors.grey[300],
                     hintText: 'Password',
                     hintStyle: const TextStyle(color: Colors.grey),
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none),
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
                     contentPadding: const EdgeInsets.symmetric(
                         vertical: 14, horizontal: 16),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isObscure ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isObscure = !_isObscure; // toggle visibility
+                        });
+                      },
+                    ),
                   ),
                 ),
+
                 const SizedBox(height: 12),
 
                 // Agree terms checkbox
@@ -207,7 +252,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       width: 24,
                     ),
                     label: const Text(
-                      'Sign in with Google',
+                      'Continue with Google',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -234,7 +279,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         fontFamily: 'Times New Roman',
                         color: Colors.black),
                     children: [
-                      const TextSpan(text: 'Already joined? '),
+                      const TextSpan(text: 'Already have an account? '),
                       TextSpan(
                         text: 'Sign in',
                         style: TextStyle(

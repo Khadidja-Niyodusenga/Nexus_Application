@@ -7,6 +7,8 @@ import 'LearnScreen.dart';
 import 'UpdatesScreen.dart';
 import 'ProfileScreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+//import 'auth_service.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -50,13 +52,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   PopupMenuItem(value: "notif", child: Text("Notification")),
                   PopupMenuItem(value: "signout", child: Text("Sign Out")),
                 ],
-              ).then((value) {
+              ).then((value) async {
                 if (value == "signout") {
-                  FirebaseAuth.instance.signOut(); // <-- Sign out the user
+                  // Sign out from Firebase Auth
+                  await FirebaseAuth.instance.signOut();
+
+                  // Sign out from GoogleSignIn to force account picker next time
+                  final g = GoogleSignIn();
+                  await g.signOut();
+
+                  // Navigate back to login screen and remove all previous routes
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    (route) => false, // Removes all previous routes
+                    (route) => false,
                   );
                 } else if (value == "track") {
                   Navigator.push(

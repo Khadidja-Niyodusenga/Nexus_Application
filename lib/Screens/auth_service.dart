@@ -126,34 +126,23 @@ class AuthService {
 
   /// Sign up with username + password
   Future<void> signUpWithUsernameAndPassword(
-      String username, String password) async {
-    if (username.isEmpty || password.isEmpty) {
-      throw Exception('Username and password are required.');
-    }
+      String email, String username, String password) async {
+    final cred = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
 
-    // Check if username exists
-    final existing = await _firestore
-        .collection('normal_users')
-        .where('username', isEqualTo: username)
-        .limit(1)
-        .get();
+    final uid = cred.user!.uid;
 
-    if (existing.docs.isNotEmpty) {
-      throw Exception('Username already taken.');
-    }
-
-    final hashedPassword = _hashPassword(password);
-
-    // Store directly in Firestore
-    await _firestore.collection('normal_users').add({
-      'uid': '', // optional, can generate or leave blank
+    await _firestore.collection('normal_users').doc(uid).set({
+      'uid': uid,
+      'email': email,
       'username': username,
-      'email': '', // no email needed
-      'name': '',
-      'phone': '',
+      'name': cred.user!.displayName ?? '',
+      'phone': cred.user!.phoneNumber ?? '',
       'role': 'user',
-      'profilePicture': '',
-      'passwordHash': hashedPassword,
+      'profilePicture': cred.user!.photoURL ?? '',
+      'passwordHash': _hashPassword(password),
       'createdAt': DateTime.now().toIso8601String(),
       'updatedAt': DateTime.now().toIso8601String(),
     });
@@ -163,6 +152,7 @@ class AuthService {
   Future<bool> loginWithUsername(String username, String password) async {
     if (username.isEmpty || password.isEmpty) return false;
 
+    // 1. Find the user document in Firestore
     final snapshot = await _firestore
         .collection('normal_users')
         .where('username', isEqualTo: username)
@@ -171,17 +161,47 @@ class AuthService {
 
     if (snapshot.docs.isEmpty) return false;
 
-    final userData = snapshot.docs.first.data();
-    final storedHash = userData['passwordHash'] ?? '';
+    final doc = snapshot.docs.first;
+    final userData = doc.data();
 
-    // Compare hashed password
-    return _hashPassword(password) == storedHash;
+    final storedHash = userData['passwordHash'] ?? '';
+    final enteredHash = _hashPassword(password);
+
+    // 2. Compare the entered password hash with Firestore hash
+    if (enteredHash == storedHash) {
+      // Password matches Firestore — login success
+      return true;
+    } else {
+      // Password mismatch — maybe user reset password via email
+      try {
+        // Try signing in with Firebase Auth using email stored in Firestore
+        final email = userData['email'] ?? '';
+        if (email.isEmpty) return false;
+
+        await _auth.signInWithEmailAndPassword(
+            email: email, password: password);
+
+        // If Firebase Auth login succeeds, update Firestore with new password hash
+        await _firestore.collection('normal_users').doc(doc.id).update({
+          'passwordHash': enteredHash,
+          'updatedAt': DateTime.now().toIso8601String(),
+        });
+
+        return true;
+      } catch (e) {
+        // Firebase Auth login failed — wrong password
+        return false;
+      }
+    }
   }
 
   /// Google sign-in
   Future<User?> signInWithGoogle() async {
-    final googleUser = await GoogleSignIn().signIn();
-    if (googleUser == null) return null;
+    // Force account picker popup every time
+    final googleSignIn = GoogleSignIn(scopes: ['email']);
+    await googleSignIn.signOut(); // ensures account picker shows
+    final googleUser = await googleSignIn.signIn();
+    if (googleUser == null) return null; // user cancelled
 
     final googleAuth = await googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
@@ -191,19 +211,31 @@ class AuthService {
 
     final userCred = await _auth.signInWithCredential(credential);
 
-    // Create Firestore entry if first time
-    final doc = await _firestore
-        .collection('normal_users')
-        .doc(userCred.user!.uid)
-        .get();
+    final docRef =
+        _firestore.collection('normal_users').doc(userCred.user!.uid);
+    final doc = await docRef.get();
 
-    if (!doc.exists) {
-      await _firestore.collection('normal_users').doc(userCred.user!.uid).set({
+    if (doc.exists) {
+      // User exists: update missing fields only
+      final data = doc.data()!;
+      await docRef.update({
+        'name': (data['name'] == null || data['name'] == '')
+            ? userCred.user!.displayName
+            : data['name'],
+        'profilePicture':
+            (data['profilePicture'] == null || data['profilePicture'] == '')
+                ? userCred.user!.photoURL
+                : data['profilePicture'],
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    } else {
+      // First-time Google login: create new document
+      await docRef.set({
         'uid': userCred.user!.uid,
         'email': userCred.user!.email ?? '',
-        'username': '', // user can set later
+        'username': '', // user can fill later
         'name': userCred.user!.displayName ?? '',
-        'phone': userCred.user!.phoneNumber ?? '',
+        'phone': '', // user can fill later
         'role': 'user',
         'profilePicture': userCred.user!.photoURL ?? '',
         'createdAt': DateTime.now().toIso8601String(),
@@ -213,4 +245,23 @@ class AuthService {
 
     return userCred.user;
   }
+
+  /// Send password reset email and update Firestore hash if password changed
+  Future<void> sendPasswordResetEmail(String email) async {
+    if (email.isEmpty) throw Exception("Email is required");
+
+    try {
+      // Send Firebase password reset email
+      await _auth.sendPasswordResetEmail(email: email);
+
+      // Optional: You can track that a reset link was sent.
+      print("Password reset email sent to $email");
+    } catch (e) {
+      throw Exception("Failed to send reset email: $e");
+    }
+  }
+}
+
+Future<void> sendPasswordReset(String email) async {
+  await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
 }
