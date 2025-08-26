@@ -34,12 +34,14 @@ dependencies:
   smooth_page_indicator: ^1.0.0
   shared_preferences: ^2.1.2
   cupertino_icons: ^1.0.6
-
+  image_picker: ^1.1.2
+  firebase_storage: ^12.4.10
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.4
   google_sign_in: ^6.2.1
   crypto: ^3.0.2
+
   # cloud_firestore: ^4.10.0
   # firebase_core: ^2.24.0
   # firebase_auth: ^4.6.2
@@ -91,6 +93,21 @@ flutter:
     - assets/photo1.png
     - assets/photo2.png
     - assets/photo3.png
+    # - assets/photo4.png
+    # - assets/photo5.png
+    # - assets/photo6.png
+    # - assets/photo7.png
+    # - assets/photo8.png
+    # - assets/photo9.png
+    # - assets/photo10.png
+    # - assets/photo11.png
+    # - assets/photo12.png
+    # - assets/photo13.png
+    # - assets/photo14.png
+    # - assets/photo15.png
+    # - assets/photo16.png
+    # - assets/photo17.png
+    - assets/default_avatar.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
