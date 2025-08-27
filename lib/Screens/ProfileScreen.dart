@@ -435,49 +435,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          "Your Profile Info",
-          style: TextStyle(fontWeight: FontWeight.bold),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // "Your Profile Info" header at the top
+            Container(
+              width: double.infinity,
+              color: const Color.fromARGB(255, 224, 224, 224),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              child: const Text(
+                "Your Profile Info",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Profile content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: StreamBuilder<User?>(
+                  stream: FirebaseAuth.instance.authStateChanges(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!snapshot.hasData || snapshot.data == null) {
+                      return const Center(child: Text("No user signed in"));
+                    }
+                    User currentUser = snapshot.data!;
+                    return StreamBuilder<DocumentSnapshot>(
+                      stream: _firestore
+                          .collection('normal_users')
+                          .doc(currentUser.uid)
+                          .snapshots(),
+                      builder: (context, docSnapshot) {
+                        if (docSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                        if (!docSnapshot.hasData || !docSnapshot.data!.exists) {
+                          return const Center(
+                              child: Text("No profile data found"));
+                        }
+                        var data =
+                            docSnapshot.data!.data() as Map<String, dynamic>;
+                        return _buildProfileUI(
+                          displayName: data['name'] ?? '',
+                          address: data['address'] ?? '',
+                          telephone: data['telephone'] ?? '',
+                          email: data['email'] ?? '',
+                          profilePicBase64: data['profilePicture'] ?? '',
+                          user: currentUser,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
-        centerTitle: true,
-        backgroundColor: const Color.fromARGB(255, 206, 202, 202),
-        foregroundColor: Colors.white,
-      ),
-      body: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(child: Text("No user signed in"));
-          }
-          User currentUser = snapshot.data!;
-          return StreamBuilder<DocumentSnapshot>(
-            stream: _firestore
-                .collection('normal_users')
-                .doc(currentUser.uid)
-                .snapshots(),
-            builder: (context, docSnapshot) {
-              if (docSnapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (!docSnapshot.hasData || !docSnapshot.data!.exists) {
-                return const Center(child: Text("No profile data found"));
-              }
-              var data = docSnapshot.data!.data() as Map<String, dynamic>;
-              return _buildProfileUI(
-                displayName: data['name'] ?? '',
-                address: data['address'] ?? '',
-                telephone: data['telephone'] ?? '',
-                email: data['email'] ?? '',
-                profilePicBase64: data['profilePicture'] ?? '',
-                user: currentUser,
-              );
-            },
-          );
-        },
       ),
     );
   }
@@ -490,61 +516,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String profilePicBase64,
     required User user,
   }) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Inside _buildProfileUI: update CircleAvatar to handle new users
-          CircleAvatar(
-            radius: 50,
-            backgroundImage: _getProfileImage(profilePicBase64),
-            child: (profilePicBase64.isEmpty)
-                ? Stack(
-                    children: [
-                      const Center(
-                        child:
-                            Icon(Icons.person, size: 50, color: Colors.black54),
-                      ),
-                      Align(
-                        alignment: Alignment.bottomRight,
-                        child: CircleAvatar(
-                          backgroundColor: Colors.white,
-                          radius: 18,
-                          child: const Icon(Icons.camera_alt,
-                              color: Colors.black, size: 20),
+    return SafeArea(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // CircleAvatar for profile picture
+            CircleAvatar(
+              radius: 50,
+              backgroundImage: _getProfileImage(profilePicBase64),
+              child: (profilePicBase64.isEmpty)
+                  ? Stack(
+                      children: [
+                        const Center(
+                          child: Icon(Icons.person,
+                              size: 50, color: Colors.black54),
                         ),
-                      ),
-                    ],
-                  )
-                : null,
-          ),
-
-          const SizedBox(height: 20),
-          Card(
-            color: const Color.fromARGB(255, 243, 241, 241),
-            elevation: 3,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+                        Align(
+                          alignment: Alignment.bottomRight,
+                          // Optional camera overlay
+                        ),
+                      ],
+                    )
+                  : null,
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  _buildProfileInfoRow("Names:", displayName),
-                  const Divider(),
-                  _buildProfileInfoRow("Address:", address),
-                  const Divider(),
-                  _buildProfileInfoRow("Telephone:", telephone),
-                  const Divider(),
-                  _buildProfileInfoRow("Email:", email),
-                ],
+
+            const SizedBox(height: 20),
+
+            // Card taking full width but flexible height
+            Container(
+              width: double.infinity,
+              child: Card(
+                color: const Color.fromARGB(255, 243, 241, 241),
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min, // Adjust height to content
+                    children: [
+                      _buildProfileInfoRow("Names:", displayName),
+                      const Divider(),
+                      _buildProfileInfoRow("Address:", address),
+                      const Divider(),
+                      _buildProfileInfoRow("Telephone:", telephone),
+                      const Divider(),
+                      _buildProfileInfoRow("Email:", email),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 30),
-          Center(
-            child: ElevatedButton(
+
+            const SizedBox(height: 30),
+
+            // Change Profile button
+            ElevatedButton(
               onPressed: () {
                 _showChangeProfileDialog(
                   context,
@@ -570,8 +601,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(fontSize: 16),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
