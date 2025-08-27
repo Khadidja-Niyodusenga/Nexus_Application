@@ -378,6 +378,7 @@
 //     );
 //   }
 // }
+
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -494,13 +495,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Inside _buildProfileUI: update CircleAvatar to handle new users
           CircleAvatar(
             radius: 50,
             backgroundImage: _getProfileImage(profilePicBase64),
-            child: _getProfileImage(profilePicBase64) == null
-                ? const Icon(Icons.person, size: 50)
+            child: (profilePicBase64.isEmpty)
+                ? Stack(
+                    children: [
+                      const Center(
+                        child:
+                            Icon(Icons.person, size: 50, color: Colors.black54),
+                      ),
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        child: CircleAvatar(
+                          backgroundColor: Colors.white,
+                          radius: 18,
+                          child: const Icon(Icons.camera_alt,
+                              color: Colors.black, size: 20),
+                        ),
+                      ),
+                    ],
+                  )
                 : null,
           ),
+
           const SizedBox(height: 20),
           Card(
             color: const Color.fromARGB(255, 243, 241, 241),
@@ -639,19 +658,26 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
     if (newImageFile != null) {
       return FileImage(newImageFile);
     } else if (profilePicBase64.isNotEmpty) {
-      if (_isBase64(profilePicBase64)) {
+      if (profilePicBase64.startsWith('data:image')) {
+        try {
+          final base64Str = profilePicBase64.split(',')[1];
+          return MemoryImage(base64Decode(base64Str));
+        } catch (e) {
+          debugPrint("Invalid Base64 Data URL: $e");
+          return null;
+        }
+      } else if (_isBase64(profilePicBase64)) {
         try {
           return MemoryImage(base64Decode(profilePicBase64));
         } catch (e) {
           debugPrint("Invalid Base64 string: $e");
-          return null; // fallback
+          return null;
         }
       } else if (profilePicBase64.startsWith('http')) {
-        // It's a URL
         return NetworkImage(profilePicBase64);
       }
     }
-    return null;
+    return null; // fallback: CircleAvatar will show Icon(Icons.person)
   }
 
 // Helper to check if string is Base64
@@ -754,13 +780,46 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
                     imageProvider = null;
                   }
 
+                  // return CircleAvatar(
+                  //   radius: 50,
+                  //   backgroundImage: _getProfileImage(
+                  //       widget.profilePicBase64, _newImageFile),
+                  //   child: (_newImageFile == null &&
+                  //           widget.profilePicBase64.isEmpty)
+                  //       ? const Icon(Icons.person, size: 50)
+
+                  //       : Align(
+                  //           alignment: Alignment.bottomRight,
+                  //           child: CircleAvatar(
+                  //             backgroundColor: Colors.white,
+                  //             radius: 18,
+                  //             child: Icon(Icons.camera_alt,
+                  //                 color: Colors.black, size: 20),
+                  //           ),
+                  //         ),
+                  // );
+
                   return CircleAvatar(
                     radius: 50,
                     backgroundImage: _getProfileImage(
                         widget.profilePicBase64, _newImageFile),
                     child: (_newImageFile == null &&
                             widget.profilePicBase64.isEmpty)
-                        ? const Icon(Icons.person, size: 50)
+                        ? Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              const Icon(Icons.person, size: 50),
+                              Align(
+                                alignment: Alignment.bottomRight,
+                                child: CircleAvatar(
+                                  backgroundColor: Colors.white,
+                                  radius: 18,
+                                  child: Icon(Icons.camera_alt,
+                                      color: Colors.black, size: 20),
+                                ),
+                              ),
+                            ],
+                          )
                         : Align(
                             alignment: Alignment.bottomRight,
                             child: CircleAvatar(
