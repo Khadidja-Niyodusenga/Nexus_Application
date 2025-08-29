@@ -40,8 +40,10 @@ dependencies:
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.4
   google_sign_in: ^6.2.1
-
+  openai_dart: ^0.4.1
   crypto: ^3.0.2
+  marquee: ^2.2.3
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -85,6 +87,7 @@ flutter:
     - assets/photo1.png
     - assets/photo2.png
     - assets/photo3.png
+    - .env
     # - assets/photo4.png
     # - assets/photo5.png
     # - assets/photo6.png

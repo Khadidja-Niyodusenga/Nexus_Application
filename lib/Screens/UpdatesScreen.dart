@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
 // import 'DetailsSdgs.dart'; // Uncomment when you have this screen
+import 'package:marquee/marquee.dart';
 
 class UpdatesScreen extends StatefulWidget {
   const UpdatesScreen({super.key});
@@ -48,9 +49,17 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
             );
           },
         ),
-        title: const Text(
-          "Learn About SDGs Rwanda Focus on",
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: SizedBox(
+          height: 30, // control marquee height
+          child: Marquee(
+            text:
+                "Learn About SDGs Rwanda Focus on \t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t",
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: Color.fromARGB(255, 0, 0, 0),
+            ),
+          ),
         ),
         backgroundColor: Colors.grey[300],
         foregroundColor: Colors.black,

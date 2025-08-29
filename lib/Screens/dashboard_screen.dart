@@ -19,6 +19,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
+  final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
   final PageController _pageController = PageController();
   int _pageViewIndex = 0; // For the PageView inside Home

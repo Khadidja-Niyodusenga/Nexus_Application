@@ -1,384 +1,3 @@
-// import 'dart:io';
-// import 'package:flutter/material.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:image_picker/image_picker.dart';
-// import 'package:firebase_storage/firebase_storage.dart';
-
-// class ProfileScreen extends StatefulWidget {
-//   const ProfileScreen({super.key});
-
-//   @override
-//   State<ProfileScreen> createState() => _ProfileScreenState();
-// }
-
-// class _ProfileScreenState extends State<ProfileScreen> {
-//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text(
-//           "Your Profile Info",
-//           style: TextStyle(fontWeight: FontWeight.bold),
-//         ),
-//         centerTitle: true,
-//         backgroundColor: const Color.fromARGB(255, 206, 202, 202),
-//         foregroundColor: Colors.white,
-//       ),
-//       body: StreamBuilder<User?>(
-//         stream: FirebaseAuth.instance.authStateChanges(),
-//         builder: (context, snapshot) {
-//           if (snapshot.connectionState == ConnectionState.waiting) {
-//             return const Center(child: CircularProgressIndicator());
-//           }
-
-//           if (!snapshot.hasData || snapshot.data == null) {
-//             return const Center(child: Text("No user signed in"));
-//           }
-
-//           User currentUser = snapshot.data!;
-
-//           return StreamBuilder<DocumentSnapshot>(
-//             stream: _firestore
-//                 .collection('normal_users')
-//                 .doc(currentUser.uid)
-//                 .snapshots(),
-//             builder: (context, docSnapshot) {
-//               if (docSnapshot.connectionState == ConnectionState.waiting) {
-//                 return const Center(child: CircularProgressIndicator());
-//               }
-
-//               if (!docSnapshot.hasData || !docSnapshot.data!.exists) {
-//                 return const Center(child: Text("No profile data found"));
-//               }
-
-//               var data = docSnapshot.data!.data() as Map<String, dynamic>;
-
-//               return _buildProfileUI(
-//                 displayName: data['name'] ?? '',
-//                 address: data['address'] ?? '',
-//                 telephone: data['telephone'] ?? '',
-//                 email: data['email'] ?? '',
-//                 profilePicUrl: data['profilePicture'] ?? '',
-//                 user: currentUser,
-//               );
-//             },
-//           );
-//         },
-//       ),
-//     );
-//   }
-
-//   Widget _buildProfileUI({
-//     required String displayName,
-//     required String address,
-//     required String telephone,
-//     required String email,
-//     required String profilePicUrl,
-//     required User user,
-//   }) {
-//     return SingleChildScrollView(
-//       padding: const EdgeInsets.all(16),
-//       child: Column(
-//         crossAxisAlignment: CrossAxisAlignment.center,
-//         children: [
-//           CircleAvatar(
-//             radius: 50,
-//             backgroundImage:
-//                 profilePicUrl.isNotEmpty ? NetworkImage(profilePicUrl) : null,
-//             child: profilePicUrl.isEmpty
-//                 ? const Icon(Icons.person, size: 50)
-//                 : null,
-//           ),
-//           const SizedBox(height: 20),
-//           Card(
-//             color: const Color.fromARGB(255, 243, 241, 241),
-//             elevation: 3,
-//             shape: RoundedRectangleBorder(
-//               borderRadius: BorderRadius.circular(12),
-//             ),
-//             child: Padding(
-//               padding: const EdgeInsets.all(16.0),
-//               child: Column(
-//                 children: [
-//                   _buildProfileInfoRow("Names:", displayName),
-//                   const Divider(),
-//                   _buildProfileInfoRow("Address:", address),
-//                   const Divider(),
-//                   _buildProfileInfoRow("Telephone:", telephone),
-//                   const Divider(),
-//                   _buildProfileInfoRow("Email:", email),
-//                 ],
-//               ),
-//             ),
-//           ),
-//           const SizedBox(height: 30),
-//           Center(
-//             child: ElevatedButton(
-//               onPressed: () {
-//                 _showChangeProfileDialog(
-//                   context,
-//                   displayName,
-//                   address,
-//                   telephone,
-//                   email,
-//                   profilePicUrl,
-//                   user,
-//                 );
-//               },
-//               style: ElevatedButton.styleFrom(
-//                 backgroundColor: Colors.blue,
-//                 foregroundColor: Colors.white,
-//                 padding:
-//                     const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-//                 shape: RoundedRectangleBorder(
-//                   borderRadius: BorderRadius.circular(8),
-//                 ),
-//               ),
-//               child: const Text(
-//                 "Change Profile",
-//                 style: TextStyle(fontSize: 16),
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   Widget _buildProfileInfoRow(String label, String value) {
-//     return Padding(
-//       padding: const EdgeInsets.symmetric(vertical: 12),
-//       child: Row(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           SizedBox(
-//             width: 130,
-//             child: Text(
-//               label,
-//               style: const TextStyle(fontWeight: FontWeight.bold),
-//             ),
-//           ),
-//           const SizedBox(width: 10),
-//           Expanded(
-//             child: Text(value),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   void _showChangeProfileDialog(
-//       BuildContext context,
-//       String names,
-//       String address,
-//       String telephone,
-//       String email,
-//       String profilePicUrl,
-//       User user) {
-//     showDialog(
-//       context: context,
-//       builder: (BuildContext context) {
-//         return ChangeProfileDialog(
-//           names: names,
-//           address: address,
-//           telephone: telephone,
-//           email: email,
-//           profilePicUrl: profilePicUrl,
-//           user: user,
-//         );
-//       },
-//     );
-//   }
-// }
-
-// // ------------------ CHANGE PROFILE DIALOG ------------------
-
-// class ChangeProfileDialog extends StatefulWidget {
-//   final String names;
-//   final String address;
-//   final String telephone;
-//   final String email;
-//   final String profilePicUrl;
-//   final User user;
-
-//   const ChangeProfileDialog({
-//     super.key,
-//     required this.names,
-//     required this.address,
-//     required this.telephone,
-//     required this.email,
-//     required this.profilePicUrl,
-//     required this.user,
-//   });
-
-//   @override
-//   State<ChangeProfileDialog> createState() => _ChangeProfileDialogState();
-// }
-
-// class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
-//   late TextEditingController _namesController;
-//   late TextEditingController _addressController;
-//   late TextEditingController _telephoneController;
-//   late TextEditingController _emailController;
-//   File? _newImageFile;
-//   bool _saving = false;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _namesController = TextEditingController(text: widget.names);
-//     _addressController = TextEditingController(text: widget.address);
-//     _telephoneController = TextEditingController(text: widget.telephone);
-//     _emailController = TextEditingController(text: widget.email);
-//   }
-
-//   Future<void> _pickImage() async {
-//     final picker = ImagePicker();
-//     final picked = await picker.pickImage(source: ImageSource.gallery);
-
-//     if (picked != null) {
-//       setState(() {
-//         _newImageFile = File(picked.path);
-//       });
-//     }
-//   }
-
-//   Future<String?> _uploadImage(File imageFile) async {
-//     try {
-//       final ref = FirebaseStorage.instance
-//           .ref()
-//           .child("profile_pictures")
-//           .child("${widget.user.uid}.jpg");
-
-//       await ref.putFile(imageFile);
-//       return await ref.getDownloadURL();
-//     } catch (e) {
-//       debugPrint("Image upload failed: $e");
-//       return null;
-//     }
-//   }
-
-//   File? _imageFile;
-//   Map<String, dynamic>? userData;
-//   @override
-//   Widget build(BuildContext context) {
-//     return Dialog(
-//       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-//       child: Padding(
-//         padding: const EdgeInsets.all(20.0),
-//         child: SingleChildScrollView(
-//           child: Column(
-//             mainAxisSize: MainAxisSize.min,
-//             children: [
-//               const Text(
-//                 "Change Profile",
-//                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-//               ),
-//               const SizedBox(height: 20),
-//               GestureDetector(
-//                 onTap: _pickImage,
-//                 child: CircleAvatar(
-//                   radius: 50,
-//                   backgroundImage: _newImageFile != null
-//                       ? FileImage(_newImageFile!) as ImageProvider
-//                       : (widget.profilePicUrl.isNotEmpty
-//                           ? NetworkImage(widget.profilePicUrl)
-//                           : null), // if no profilePicUrl, show empty avatar
-//                   child: Align(
-//                     alignment: Alignment.bottomRight,
-//                     child: CircleAvatar(
-//                       backgroundColor: Colors.white,
-//                       radius: 18,
-//                       child:
-//                           Icon(Icons.camera_alt, color: Colors.black, size: 20),
-//                     ),
-//                   ),
-//                 ),
-//               ),
-//               const SizedBox(height: 20),
-//               _buildTextField("Names", _namesController),
-//               const SizedBox(height: 15),
-//               _buildTextField("Address", _addressController),
-//               const SizedBox(height: 15),
-//               _buildTextField("Telephone", _telephoneController),
-//               const SizedBox(height: 15),
-//               _buildTextField("Email", _emailController),
-//               const SizedBox(height: 25),
-//               if (_saving) const CircularProgressIndicator(),
-//               Row(
-//                 mainAxisAlignment: MainAxisAlignment.spaceAround,
-//                 children: [
-//                   ElevatedButton(
-//                     onPressed: () => Navigator.of(context).pop(),
-//                     style: ElevatedButton.styleFrom(
-//                       backgroundColor: Colors.grey,
-//                       foregroundColor: Colors.white,
-//                     ),
-//                     child: const Text("Cancel"),
-//                   ),
-//                   ElevatedButton(
-//                     onPressed: () async {
-//                       setState(() => _saving = true);
-
-//                       String? profilePicUrl;
-
-//                       if (_newImageFile != null) {
-//                         profilePicUrl = await _uploadImage(_newImageFile!);
-//                         if (profilePicUrl == null) {
-//                           // Upload failed
-//                           setState(() => _saving = false);
-//                           return; // stop here
-//                         }
-//                       } else if (widget.profilePicUrl.isNotEmpty) {
-//                         profilePicUrl = widget.profilePicUrl;
-//                       } else {
-//                         profilePicUrl = null;
-//                       }
-
-//                       await FirebaseFirestore.instance
-//                           .collection('normal_users')
-//                           .doc(widget.user.uid)
-//                           .update({
-//                         'name': _namesController.text,
-//                         'address': _addressController.text,
-//                         'telephone': _telephoneController.text,
-//                         'email': _emailController.text,
-//                         'profilePicture': profilePicUrl,
-//                       });
-
-//                       setState(() => _saving = false);
-//                       Navigator.of(context).pop();
-//                     },
-//                     style: ElevatedButton.styleFrom(
-//                       backgroundColor: Colors.blue,
-//                       foregroundColor: Colors.white,
-//                     ),
-//                     child: const Text("Save"),
-//                   ),
-//                 ],
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _buildTextField(String label, TextEditingController controller) {
-//     return TextField(
-//       controller: controller,
-//       decoration: InputDecoration(
-//         labelText: label,
-//         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-//       ),
-//       textInputAction: TextInputAction.next,
-//     );
-//   }
-// }
-
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -488,13 +107,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         }
                         var data =
                             docSnapshot.data!.data() as Map<String, dynamic>;
-                        return _buildProfileUI(
-                          displayName: data['name'] ?? '',
-                          address: data['address'] ?? '',
-                          telephone: data['telephone'] ?? '',
-                          email: data['email'] ?? '',
-                          profilePicBase64: data['profilePicture'] ?? '',
-                          user: currentUser,
+                        // Wrap the profile UI with SingleChildScrollView
+                        return SingleChildScrollView(
+                          child: _buildProfileUI(
+                            displayName: data['name'] ?? '',
+                            address: data['address'] ?? '',
+                            phone: data['phone'] ?? '',
+                            email: data['email'] ?? '',
+                            profilePicBase64: data['profilePicture'] ?? '',
+                            user: currentUser,
+                          ),
                         );
                       },
                     );
@@ -511,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildProfileUI({
     required String displayName,
     required String address,
-    required String telephone,
+    required String phone,
     required String email,
     required String profilePicBase64,
     required User user,
@@ -563,7 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const Divider(),
                       _buildProfileInfoRow("Address:", address),
                       const Divider(),
-                      _buildProfileInfoRow("Telephone:", telephone),
+                      _buildProfileInfoRow("Telephone:", phone),
                       const Divider(),
                       _buildProfileInfoRow("Email:", email),
                     ],
@@ -581,7 +203,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   context,
                   displayName,
                   address,
-                  telephone,
+                  phone,
                   email,
                   profilePicBase64,
                   user,
@@ -633,7 +255,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       BuildContext context,
       String names,
       String address,
-      String telephone,
+      String phone,
       String email,
       String profilePicBase64,
       User user) {
@@ -643,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return ChangeProfileDialog(
           names: names,
           address: address,
-          telephone: telephone,
+          phone: phone,
           email: email,
           profilePicBase64: profilePicBase64,
           user: user,
@@ -658,7 +280,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 class ChangeProfileDialog extends StatefulWidget {
   final String names;
   final String address;
-  final String telephone;
+  final String phone;
   final String email;
   final String profilePicBase64;
   final User user;
@@ -667,7 +289,7 @@ class ChangeProfileDialog extends StatefulWidget {
     super.key,
     required this.names,
     required this.address,
-    required this.telephone,
+    required this.phone,
     required this.email,
     required this.profilePicBase64,
     required this.user,
@@ -726,7 +348,7 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
     super.initState();
     _namesController = TextEditingController(text: widget.names);
     _addressController = TextEditingController(text: widget.address);
-    _telephoneController = TextEditingController(text: widget.telephone);
+    _telephoneController = TextEditingController(text: widget.phone);
     _emailController = TextEditingController(text: widget.email);
   }
 
@@ -810,25 +432,6 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
                   } else {
                     imageProvider = null;
                   }
-
-                  // return CircleAvatar(
-                  //   radius: 50,
-                  //   backgroundImage: _getProfileImage(
-                  //       widget.profilePicBase64, _newImageFile),
-                  //   child: (_newImageFile == null &&
-                  //           widget.profilePicBase64.isEmpty)
-                  //       ? const Icon(Icons.person, size: 50)
-
-                  //       : Align(
-                  //           alignment: Alignment.bottomRight,
-                  //           child: CircleAvatar(
-                  //             backgroundColor: Colors.white,
-                  //             radius: 18,
-                  //             child: Icon(Icons.camera_alt,
-                  //                 color: Colors.black, size: 20),
-                  //           ),
-                  //         ),
-                  // );
 
                   return CircleAvatar(
                     radius: 50,
