@@ -1,121 +1,13 @@
-// import 'package:flutter/material.dart';
-
-// class DetailsScreen extends StatefulWidget {
-//   final int sdgNumber;
-//   final String sdgTitle;
-//   final String sdgDescription;
-
-//   const DetailsScreen({
-//     super.key,
-//     required this.sdgNumber,
-//     required this.sdgTitle,
-//     required this.sdgDescription,
-//   });
-
-//   @override
-//   State<DetailsScreen> createState() => _DetailsScreenState();
-// }
-
-// class _DetailsScreenState extends State<DetailsScreen> {
-//   final TextEditingController _answerController = TextEditingController();
-
-//   void _showThankYouDialog() {
-//     showDialog(
-//       context: context,
-//       builder: (_) => AlertDialog(
-//         title: const Text("Thank you!"),
-//         content: const Text(
-//             "We appreciate your response and your commitment to learning about this SDG."),
-//         actions: [
-//           TextButton(
-//             onPressed: () => Navigator.of(context).pop(),
-//             child: const Text("Close"),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   // Get the image path based on SDG number
-//   String getSdgImagePath() {
-//     // Ensure the number is between 1 and 17
-//     int number = widget.sdgNumber.clamp(1, 17);
-//     return "assets/photo$number.png"; // photo1.png, photo2.png, ...
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text(widget.sdgTitle),
-//         leading: IconButton(
-//           icon: const Icon(Icons.arrow_back),
-//           onPressed: () => Navigator.pop(context),
-//         ),
-//         backgroundColor: Colors.green[600],
-//       ),
-//       body: SingleChildScrollView(
-//         padding: const EdgeInsets.all(16),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Image.asset(
-//               getSdgImagePath(), // Use local image based on SDG number
-//               height: 200,
-//               width: double.infinity,
-//               fit: BoxFit.cover,
-//             ),
-//             const SizedBox(height: 12),
-//             Text(
-//               widget.sdgTitle,
-//               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-//             ),
-//             const SizedBox(height: 8),
-//             Text(
-//               widget.sdgDescription,
-//               style: const TextStyle(fontSize: 16),
-//               textAlign: TextAlign.justify,
-//             ),
-//             const SizedBox(height: 16),
-//             const Text(
-//               "Question?",
-//               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-//             ),
-//             const SizedBox(height: 4),
-//             const Text(
-//               "What practical actions can you take or inspire others to take to support this goal in your community?",
-//               style: TextStyle(fontSize: 16),
-//             ),
-//             const SizedBox(height: 12),
-//             TextField(
-//               controller: _answerController,
-//               decoration: const InputDecoration(
-//                 hintText: "Write your Answer here...",
-//                 border: OutlineInputBorder(),
-//               ),
-//               maxLines: 3,
-//             ),
-//             const SizedBox(height: 12),
-//             ElevatedButton(
-//               onPressed: () {
-//                 if (_answerController.text.isNotEmpty) {
-//                   _showThankYouDialog();
-//                 }
-//               },
-//               child: const Text("Submit"),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:http/http.dart' as http;
+import 'package:openai_dart/openai_dart.dart' as openai;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+// Only import OpenAI without bringing its Image class
+import 'package:openai_dart/openai_dart.dart' hide Image;
 
 class DetailsScreen extends StatefulWidget {
   final int sdgNumber;
@@ -132,6 +24,7 @@ class DetailsScreen extends StatefulWidget {
 class _DetailsScreenState extends State<DetailsScreen> {
   final Map<String, TextEditingController> _controllers = {};
 
+  final client = OpenAIClient(apiKey: "YOUR_OPENAI_API_KEY"); // store safely!
   void _showThankYouDialog() {
     showDialog(
       context: context,
@@ -147,6 +40,48 @@ class _DetailsScreenState extends State<DetailsScreen> {
         ],
       ),
     );
+  }
+
+  Future<String> analyzeWithAI(
+      {required String question, required String userResponse}) async {
+    final apiKey = dotenv.env['OPENAI_API_KEY'];
+    final url = Uri.parse("https://api.openai.com/v1/chat/completions");
+
+    final body = {
+      "model": "gpt-3.5-turbo",
+      "messages": [
+        {"role": "system", "content": "You are an SDG learning assistant."},
+        {
+          "role": "user",
+          "content":
+              "Question: $question\nUser Response: $userResponse\n\nAnalyze this answer..."
+        }
+      ],
+      "max_tokens": 150,
+    };
+
+    final headers = {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer $apiKey",
+    };
+
+    int retryCount = 0;
+    while (retryCount < 3) {
+      final responseHttp =
+          await http.post(url, headers: headers, body: jsonEncode(body));
+      if (responseHttp.statusCode == 200) {
+        final decoded = jsonDecode(responseHttp.body);
+        return decoded['choices'][0]['message']['content'];
+      } else if (responseHttp.statusCode == 429) {
+        // Too many requests, wait before retrying
+        await Future.delayed(Duration(seconds: 2));
+        retryCount++;
+      } else {
+        return "Error analyzing response: ${responseHttp.statusCode}";
+      }
+    }
+
+    return "Error: Too many requests, please try again later.";
   }
 
   @override
@@ -316,23 +251,50 @@ class _DetailsScreenState extends State<DetailsScreen> {
                   ElevatedButton(
                     onPressed: () async {
                       String answer = _controllers[docId]!.text.trim();
-                      if (answer.isNotEmpty) {
+                      firebase_auth.User? user =
+                          firebase_auth.FirebaseAuth.instance.currentUser;
+                      // get logged in user
+                      if (answer.isNotEmpty && user != null) {
+                        // 1️⃣ Save answer into Firestore
                         await FirebaseFirestore.instance
-                            .collection('lessons')
-                            .doc(docId)
                             .collection('answers')
                             .add({
-                          'answer': answer,
+                          'userId': user.uid, // logged in user id
+                          'sdgId': docId, // SDG id = current lesson/question id
+                          'response': answer, // what user typed
                           'timestamp': FieldValue.serverTimestamp(),
                         });
 
-                        _showThankYouDialog();
+                        // 2️⃣ Call AI to analyze the response
+                        String feedback = await analyzeWithAI(
+                          question: data['interactiveQuestion'],
+                          userResponse: answer,
+                        );
+
+                        // 3️⃣ Show popup with AI feedback
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: const Text("Feedback"),
+                              content: Text(feedback),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text("OK"),
+                                )
+                              ],
+                            );
+                          },
+                        );
+
+                        // 4️⃣ Clear textfield
                         _controllers[docId]!.clear();
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green, // ✅ green background
-                      foregroundColor: Colors.white, // optional: text color
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
                     ),
                     child: const Text("Submit"),
                   ),
