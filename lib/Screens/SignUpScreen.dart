@@ -67,12 +67,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
           .collection('normal_users')
           .doc(userCred.user!.uid)
           .set({
+        'uid': userCred.user!.uid,
         'name': '',
         'address': '',
-        'telephone': '',
+        'phone': '',
         'email': email,
         'profilePicture': '',
+        'role': 'user', // default role
         'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'lastLogin': FieldValue.serverTimestamp(),
       });
 
       _showMessage("Account created successfully!");
@@ -86,38 +90,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       setState(() => _loading = false);
     }
   }
-
-  // Future<void> _signUpWithGoogle() async {
-  //   setState(() => _loading = true);
-  //   try {
-  //     final user = await _authService.signInWithGoogle();
-
-  //     if (user != null) {
-  //       // Fetch sign-in methods for this email
-  //       final methods =
-  //           await FirebaseAuth.instance.fetchSignInMethodsForEmail(user.email!);
-
-  //       if (methods.contains('password')) {
-  //         // Email already exists for manual sign-up
-  //         _showMessage(
-  //             "This email is registered manually. Please use email/password to sign in.");
-  //         await FirebaseAuth.instance.signOut(); // log out from Google
-  //         return;
-  //       }
-
-  //       // Otherwise, allow Google login
-  //       _showMessage("Google sign-in successful!");
-  //       Navigator.pushReplacement(
-  //         context,
-  //         MaterialPageRoute(builder: (context) => const DashboardScreen()),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     _showMessage(e.toString());
-  //   } finally {
-  //     setState(() => _loading = false);
-  //   }
-  // }
 
   Future<void> _continueWithGoogle() async {
     setState(() => _loading = true);
@@ -168,12 +140,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
             .collection('normal_users')
             .doc(user.uid)
             .set({
-          'name': '',
+          'uid': user.uid,
+          'name': user.displayName ?? '',
           'address': '',
-          'telephone': '',
-          'email': email,
-          'profilePicture': '',
+          'phone': '',
+          'email': user.email ?? '',
+          'profilePicture': user.photoURL ?? '',
+          'role': 'user', // default role
           'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'lastLogin': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // if returning user, update their lastLogin + updatedAt
+        await FirebaseFirestore.instance
+            .collection('normal_users')
+            .doc(user.uid)
+            .update({
+          'lastLogin': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
         });
       }
 
@@ -322,7 +307,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             ),
                           ),
                           child: const Text(
-                            'Sign up',
+                            'Create Account',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,

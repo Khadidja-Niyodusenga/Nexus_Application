@@ -1,237 +1,8 @@
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:flutter/material.dart';
-// import 'package:intl/intl.dart';
-
-// class NotificationItem {
-//   final String id;
-//   final String type;
-//   final String title;
-//   final DateTime dateTime;
-//   final String message;
-//   final String url;
-//   bool isRead;
-
-//   NotificationItem({
-//     required this.id,
-//     required this.type,
-//     required this.title,
-//     required this.dateTime,
-//     required this.message,
-//     required this.url,
-//     this.isRead = false,
-//   });
-
-//   factory NotificationItem.fromFirestore(DocumentSnapshot doc) {
-//     final data = doc.data() as Map<String, dynamic>;
-//     return NotificationItem(
-//       id: doc.id,
-//       type: data['notification_type'] ?? "Unknown",
-//       title: data['title'] ?? "No Title",
-//       dateTime: (data['timestamp'] as Timestamp).toDate(),
-//       message: data['description'] ?? "",
-//       url: data['url'] ?? "",
-//       isRead: data['isRead'] ?? false, // 👈 persist read state in Firestore
-//     );
-//   }
-
-//   Map<String, dynamic> toMap() {
-//     return {
-//       "notification_type": type,
-//       "title": title,
-//       "timestamp": Timestamp.fromDate(dateTime),
-//       "description": message,
-//       "url": url,
-//       "isRead": isRead,
-//     };
-//   }
-// }
-
-// class NotificationScreen extends StatelessWidget {
-//   const NotificationScreen({super.key});
-
-//   String formatTime(DateTime dateTime) {
-//     return DateFormat.Hm().format(dateTime.toLocal());
-//   }
-
-//   Future<void> markAsRead(NotificationItem notification) async {
-//     await FirebaseFirestore.instance
-//         .collection("notifications")
-//         .doc(notification.id)
-//         .update({"isRead": true});
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text(
-//           "Notifications",
-//           style: TextStyle(fontWeight: FontWeight.bold),
-//         ),
-//         backgroundColor: Colors.grey[300],
-//         foregroundColor: Colors.black,
-//         elevation: 0,
-//       ),
-//       body: StreamBuilder<QuerySnapshot>(
-//         stream: FirebaseFirestore.instance
-//             .collection("notifications")
-//             .orderBy("timestamp", descending: true)
-//             .snapshots(),
-//         builder: (context, snapshot) {
-//           if (!snapshot.hasData) {
-//             return const Center(child: CircularProgressIndicator());
-//           }
-
-//           final notifications = snapshot.data!.docs
-//               .map((doc) => NotificationItem.fromFirestore(doc))
-//               .toList();
-
-//           return ListView.builder(
-//             itemCount: notifications.length,
-//             itemBuilder: (context, index) {
-//               final notification = notifications[index];
-//               return GestureDetector(
-//                 onTap: () async {
-//                   await markAsRead(notification);
-//                   Navigator.push(
-//                     context,
-//                     MaterialPageRoute(
-//                       builder: (context) =>
-//                           NotificationDetailScreen(notification: notification),
-//                     ),
-//                   );
-//                 },
-//                 child: Container(
-//                   margin:
-//                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-//                   padding: const EdgeInsets.all(12),
-//                   decoration: BoxDecoration(
-//                     color: Colors.grey.shade200,
-//                     borderRadius: BorderRadius.circular(12),
-//                   ),
-//                   child: Row(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       // Expanded message area
-//                       Expanded(
-//                         child: Column(
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: [
-//                             Text(
-//                               notification.title,
-//                               style:
-//                                   const TextStyle(fontWeight: FontWeight.bold),
-//                             ),
-//                             const SizedBox(height: 4),
-//                             Text(
-//                               notification.message,
-//                               maxLines: 1,
-//                               overflow: TextOverflow.ellipsis,
-//                               style: TextStyle(
-//                                 color: Colors.grey.shade700,
-//                                 fontSize: 14,
-//                               ),
-//                             ),
-//                           ],
-//                         ),
-//                       ),
-//                       const SizedBox(width: 8),
-//                       // Time + read state
-//                       Column(
-//                         crossAxisAlignment: CrossAxisAlignment.end,
-//                         children: [
-//                           Text(
-//                             formatTime(notification.dateTime),
-//                             style: TextStyle(
-//                               fontWeight: FontWeight.bold,
-//                               color: notification.isRead
-//                                   ? Colors.black
-//                                   : Colors.green,
-//                             ),
-//                           ),
-//                           const SizedBox(height: 2),
-//                           if (!notification.isRead)
-//                             const Text(
-//                               "1",
-//                               style: TextStyle(
-//                                   fontWeight: FontWeight.bold,
-//                                   color: Colors.green),
-//                             ),
-//                         ],
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//               );
-//             },
-//           );
-//         },
-//       ),
-//     );
-//   }
-// }
-
-// class NotificationDetailScreen extends StatelessWidget {
-//   final NotificationItem notification;
-
-//   const NotificationDetailScreen({super.key, required this.notification});
-
-//   String formatTime(DateTime dateTime) {
-//     return DateFormat.Hm().format(dateTime.toLocal());
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text(notification.type),
-//         backgroundColor: Colors.grey[300],
-//         foregroundColor: Colors.black,
-//         elevation: 0,
-//       ),
-//       body: SingleChildScrollView(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Container(
-//               padding: const EdgeInsets.all(12),
-//               decoration: BoxDecoration(
-//                 color: Colors.grey.shade200,
-//                 borderRadius: BorderRadius.circular(12),
-//               ),
-//               child: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   Text(
-//                     notification.title,
-//                     style: const TextStyle(
-//                         fontWeight: FontWeight.bold, fontSize: 16),
-//                   ),
-//                   const SizedBox(height: 12),
-//                   Text(
-//                     notification.message,
-//                     style: const TextStyle(fontSize: 16, color: Colors.black87),
-//                   ),
-//                 ],
-//               ),
-//             ),
-//             const SizedBox(height: 6),
-//             Text(
-//               formatTime(notification.dateTime),
-//               style: const TextStyle(fontSize: 12, color: Colors.black),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class NotificationItem {
   final String id;
@@ -442,8 +213,11 @@ class NotificationDetailScreen extends StatelessWidget {
   final String type;
   final List<NotificationItem> notifications;
 
-  const NotificationDetailScreen(
-      {super.key, required this.type, required this.notifications});
+  const NotificationDetailScreen({
+    super.key,
+    required this.type,
+    required this.notifications,
+  });
 
   String formatTime(DateTime dateTime) {
     final now = DateTime.now();
@@ -460,9 +234,21 @@ class NotificationDetailScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _openUrl(BuildContext context, String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      // Ensure it opens in external browser
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Could not open link")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Older notifications on top, newer below
+    // Older notifications on top
     notifications.sort((a, b) => a.dateTime.compareTo(b.dateTime));
 
     return Scaffold(
@@ -495,8 +281,26 @@ class NotificationDetailScreen extends StatelessWidget {
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 16),
                     ),
-                    const SizedBox(height: 4),
-                    Text(n.message),
+                    const SizedBox(height: 6),
+                    Text(
+                      n.message,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    // Add URL at the end of the notification
+                    if (n.url.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () => _openUrl(context, n.url),
+                        child: Text(
+                          n.url,
+                          style: TextStyle(
+                            color: Colors.blue.shade700,
+                            decoration: TextDecoration.underline,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -504,10 +308,7 @@ class NotificationDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 12, bottom: 6),
                 child: Text(
                   formatTime(n.dateTime),
-                  style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
                 ),
               ),
             ],

@@ -504,9 +504,10 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
                           .update({
                         'name': _namesController.text,
                         'address': _addressController.text,
-                        'telephone': _telephoneController.text,
+                        'phone': _telephoneController.text,
                         'email': _emailController.text,
                         'profilePicture': profilePicBase64,
+                        'updatedAt': FieldValue.serverTimestamp(),
                       });
 
                       setState(() => _saving = false);

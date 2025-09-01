@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
 // import 'DetailsSdgs.dart'; // Uncomment when you have this screen
 import 'package:marquee/marquee.dart';
+import 'DetailsScreen.dart';
 
 class UpdatesScreen extends StatefulWidget {
   const UpdatesScreen({super.key});
@@ -19,6 +20,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
 
   final List<String> bottomLabels = ["Home", "Learn", "Updates", "Profile"];
 
+  final List<int> sdgNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 13, 17];
   final List<String> sdgImages = [
     "assets/sdg1.jpeg",
     "assets/sdg2.jpeg",
@@ -104,26 +106,20 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
             mainAxisSpacing: 12,
           ),
           itemBuilder: (context, index) {
+            final List<int> sdgOrder = [1, 2, 3, 4, 5, 6, 7, 8, 13, 17];
+
+            final sdgNumber = sdgOrder[index]; // ✅ Use mapping
             return GestureDetector(
               onTap: () async {
-                // Navigate to details screen
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => Scaffold(
-                      appBar: AppBar(
-                        title: Text("SDG ${index + 1} Detail"),
-                      ),
-                      body: Center(
-                        child: Text("Learning more about SDG ${index + 1}"),
-                      ),
-                    ),
+                    builder: (_) => DetailsScreen(sdgNumber: sdgNumber),
                   ),
                 );
 
-                // After returning, mark this SDG as opened
                 setState(() {
-                  openedSDGs.add(index);
+                  openedSDGs.add(sdgNumber); // ✅ Mark by SDG number
                 });
               },
               child: Container(
