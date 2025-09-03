@@ -133,7 +133,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _showMessage("Google sign-in failed. Try again.");
         return;
       }
-
       // If new user, create Firestore document
       if (userCredential.additionalUserInfo?.isNewUser ?? false) {
         await FirebaseFirestore.instance
