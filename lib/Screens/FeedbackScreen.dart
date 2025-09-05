@@ -184,11 +184,21 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           'createdAt': DateTime.now(), // ✅ current date & time in Dart
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Feedback sent!"),
-            backgroundColor: Colors.green,
-          ),
+        // ✅ Show thank you pop-up
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text("Thank You!"),
+              content: const Text("Your feedback has been sent successfully."),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text("OK"),
+                ),
+              ],
+            );
+          },
         );
 
         // Clear fields after sending

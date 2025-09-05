@@ -11,6 +11,7 @@ class NotificationItem {
   final DateTime dateTime;
   final String message;
   final String url;
+  final String status;
   bool isRead;
 
   NotificationItem({
@@ -20,6 +21,7 @@ class NotificationItem {
     required this.dateTime,
     required this.message,
     required this.url,
+    required this.status,
     this.isRead = false,
   });
 
@@ -32,6 +34,7 @@ class NotificationItem {
       dateTime: (data['timestamp'] as Timestamp).toDate(),
       message: data['description'] ?? "",
       url: data['url'] ?? "",
+      status: data['status'] ?? "",
       isRead: data['isRead'] ?? false,
     );
   }
@@ -78,15 +81,21 @@ class NotificationScreen extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection("notifications")
+            //.where("status", isEqualTo: "Published")
             .orderBy("timestamp", descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No published notifications yet"));
           }
 
           final notifications = snapshot.data!.docs
               .map((doc) => NotificationItem.fromFirestore(doc))
+              .where((n) => n.status == "Published") // 👈 filter locally
               .toList();
 
           // Keep only latest notification per type & unread count

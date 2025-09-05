@@ -4,10 +4,8 @@
 // import 'dart:typed_data';
 // import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 // import 'package:http/http.dart' as http;
-// import 'package:openai_dart/openai_dart.dart' as openai;
+
 // import 'package:flutter_dotenv/flutter_dotenv.dart';
-// // Only import OpenAI without bringing its Image class
-// import 'package:openai_dart/openai_dart.dart' hide Image;
 
 // class DetailsScreen extends StatefulWidget {
 //   final int sdgNumber;
@@ -24,12 +22,11 @@
 // class _DetailsScreenState extends State<DetailsScreen> {
 //   int responsesCount = 0;
 //   bool canRespond = true;
-//   bool _hasCheckedResponses = false; // add in your State class
+//   bool _hasCheckedResponses = false;
 
 //   final Map<String, TextEditingController> _controllers = {};
-//   bool _isSubmitting = false; // add this inside _DetailsScreenState
-//   final client =
-//       OpenAIClient(apiKey: dotenv.env['OPENAI_API_KEY']!); // store safely!
+//   bool _isSubmitting = false;
+//   // final client = OpenAIClient(apiKey: dotenv.env['OPENAI_API_KEY']!);
 
 //   String? _docId;
 //   Future<void> _initializeLesson() async {
@@ -44,7 +41,7 @@
 //       _docId = lesson.id;
 //       _controllers.putIfAbsent(_docId!, () => TextEditingController());
 //       await _checkResponses(_docId!);
-//       setState(() {}); // trigger rebuild after data ready
+//       setState(() {});
 //     }
 //   }
 
@@ -75,64 +72,70 @@
 //         .where('sdgId', isEqualTo: docId)
 //         .get();
 
-//     setState(() {
-//       responsesCount = answersSnapshot.docs.length;
-//       canRespond = responsesCount < 2; // max 2 responses allowed
-//     });
+//     // setState(() {
+//     //   responsesCount = answersSnapshot.docs.length;
+//     //   canRespond = responsesCount < 2; // max 2 responses allowed
+//     // });
 //   }
 
 //   Future<String> analyzeWithAI({
 //     required String question,
 //     required String userResponse,
 //   }) async {
-//     final apiKey = dotenv.env['OPENAI_API_KEY'];
+//     final apiKey =
+//         dotenv.env['HUGGINGFACE_API_KEY']; // Your Hugging Face API key
 
 //     if (apiKey == null || apiKey.isEmpty) {
-//       return "❌ API key is missing. Please set your OpenAI API key.";
+//       return "API key is missing. Please set your Hugging Face API key.";
 //     }
 
-//     final url = Uri.parse("https://api.openai.com/v1/chat/completions");
-
-//     // Quick local fallback for very short answers
+//     // Quick tip for very short responses
 //     if (userResponse.trim().length < 20) {
-//       return "Good start! Try writing a more detailed answer so we can give better feedback.";
+//       return "Good start! Try adding more details to get better feedback.";
 //     }
 
-//     final body = {
-//       "model": "gpt-4o-mini",
-//       "messages": [
-//         {
-//           "role": "system",
-//           "content":
-//               "You are an SDG learning assistant. Always be encouraging, clear, and give suggestions for improvement."
-//         },
-//         {
-//           "role": "user",
-//           "content":
-//               "Question: $question\nUser Response: $userResponse\n\nGive feedback: say if it’s good, partially good, or needs improvement. Explain why, and suggest how to improve."
-//         }
-//       ],
-//       "max_tokens": 200,
-//     };
+//     final url = Uri.parse(
+//         "https://api-inference.huggingface.co/models/openai/gpt-oss-20b");
+
+//     final prompt = """
+// You are an SDG learning assistant.
+// Always be encouraging, clear, and give friendly suggestions for improvement.
+// Never just say 'needs improvement'; explain why and suggest improvements in a friendly way.
+
+// Question: $question
+// User Response: $userResponse
+
+// Give feedback as a friendly message: highlight if it is good, partially good, or needs improvement, but embed this inside a message with suggestions for improvement.
+// """;
 
 //     final headers = {
-//       "Content-Type": "application/json",
 //       "Authorization": "Bearer $apiKey",
+//       "Content-Type": "application/json",
 //     };
 
+//     final body = jsonEncode({
+//       "inputs": prompt,
+//       "parameters": {"max_new_tokens": 250, "temperature": 0.7}
+//     });
+
 //     int retryCount = 0;
-//     int delay = 2;
+//     int delaySeconds = 2;
 
 //     while (retryCount < 3) {
 //       try {
-//         final res =
-//             await http.post(url, headers: headers, body: jsonEncode(body));
+//         final res = await http.post(url, headers: headers, body: body);
 
 //         if (res.statusCode == 200) {
 //           final decoded = jsonDecode(res.body);
-//           final feedback = decoded["choices"][0]["message"]["content"];
 
-//           // Save feedback in cache
+//           final feedback = decoded is List && decoded.isNotEmpty
+//               ? (decoded[0]['generated_text'] ??
+//                   decoded[0]['summary_text'] ??
+//                   decoded[0].values.first ??
+//                   "AI response format not recognized.")
+//               : "Could not parse AI response.";
+
+//           // Save feedback in Firestore cache
 //           await FirebaseFirestore.instance.collection('feedbackCache').add({
 //             'response': userResponse,
 //             'feedback': feedback,
@@ -140,22 +143,25 @@
 //           });
 
 //           return feedback;
-//         } else if (res.statusCode == 429) {
-//           // Rate limit: wait and retry
-//           await Future.delayed(Duration(seconds: delay));
-//           delay *= 2; // exponential backoff
+//         } else if (res.statusCode == 503) {
+//           // Model is loading or busy
+//           await Future.delayed(Duration(seconds: delaySeconds));
+//           delaySeconds *= 2;
 //           retryCount++;
 //         } else {
-//           // Other HTTP errors
 //           return "Error ${res.statusCode}: ${res.body}";
 //         }
 //       } catch (e) {
-//         // Network or parsing errors
-//         return "Exception occurred: $e";
+//         retryCount++;
+//         await Future.delayed(Duration(seconds: delaySeconds));
+//         delaySeconds *= 2;
+//         if (retryCount >= 3) {
+//           return "Failed to get feedback from AI: $e";
+//         }
 //       }
 //     }
 
-//     return "⚠️ The AI service is busy. Please try again in a few seconds.";
+//     return "Too many requests. Please try again shortly.";
 //   }
 
 //   @override
@@ -433,12 +439,11 @@ class DetailsScreen extends StatefulWidget {
 class _DetailsScreenState extends State<DetailsScreen> {
   int responsesCount = 0;
   bool canRespond = true;
-  bool _hasCheckedResponses = false; 
+  bool _hasCheckedResponses = false;
 
   final Map<String, TextEditingController> _controllers = {};
-  bool _isSubmitting = false; 
-  final client =
-      OpenAIClient(apiKey: dotenv.env['OPENAI_API_KEY']!); 
+  bool _isSubmitting = false;
+  final client = OpenAIClient(apiKey: dotenv.env['OPENAI_API_KEY']!);
 
   String? _docId;
   Future<void> _initializeLesson() async {
@@ -453,7 +458,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
       _docId = lesson.id;
       _controllers.putIfAbsent(_docId!, () => TextEditingController());
       await _checkResponses(_docId!);
-      setState(() {}); 
+      setState(() {});
     }
   }
 
@@ -494,77 +499,69 @@ class _DetailsScreenState extends State<DetailsScreen> {
     required String question,
     required String userResponse,
   }) async {
-    final apiKey = dotenv.env['OPENAI_API_KEY']!;
+    final apiKey = dotenv.env['OPENAI_API_KEY'];
 
     if (apiKey == null || apiKey.isEmpty) {
-      return "API key is missing. Please set your OpenAI API key.";
+      return "API key is missing. Please set your OpenAI API key in .env";
+    }
+
+    if (userResponse.trim().length < 20) {
+      return "Good start! Try writing a more detailed answer for better feedback.";
+    }
+
+    // Check Firestore cache
+    final cached = await FirebaseFirestore.instance
+        .collection('feedbackCache')
+        .where('question', isEqualTo: question)
+        .where('response', isEqualTo: userResponse)
+        .limit(1)
+        .get();
+
+    if (cached.docs.isNotEmpty) {
+      return cached.docs.first['feedback'];
     }
 
     final url = Uri.parse("https://api.openai.com/v1/chat/completions");
-
-    
-    if (userResponse.trim().length < 20) {
-      return "Good start! Try writing a more detailed answer so we can give better feedback.";
-    }
-
     final body = {
-      "model": "gpt-4o-mini",
+      "model": "gpt-3.5-turbo",
       "messages": [
-        {
-          "role": "system",
-          "content":
-              "You are an SDG learning assistant. Always be encouraging, clear, and give suggestions for improvement."
-        },
+        {"role": "system", "content": "You are an SDG learning assistant."},
         {
           "role": "user",
           "content":
-              "Question: $question\nUser Response: $userResponse\n\nGive feedback: say if it’s good, partially good, or needs improvement. Explain why, and suggest how to improve."
+              "Question: $question\nAnswer: $userResponse\nPlease provide friendly feedback in JSON format."
         }
       ],
-      "max_tokens": 200,
+      "max_tokens": 150,
     };
-
     final headers = {
       "Content-Type": "application/json",
       "Authorization": "Bearer $apiKey",
     };
 
-    int retryCount = 0;
-    int delay = 2;
-
-    while (retryCount < 3) {
-      try {
-        final res =
-            await http.post(url, headers: headers, body: jsonEncode(body));
-
-        if (res.statusCode == 200) {
-          final decoded = jsonDecode(res.body);
+    try {
+      final res =
+          await http.post(url, headers: headers, body: jsonEncode(body));
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        if (decoded["choices"] != null && decoded["choices"].isNotEmpty) {
           final feedback = decoded["choices"][0]["message"]["content"];
-
-          // Save feedback in cache
           await FirebaseFirestore.instance.collection('feedbackCache').add({
+            'question': question,
             'response': userResponse,
             'feedback': feedback,
             'timestamp': FieldValue.serverTimestamp(),
           });
-
           return feedback;
-        } else if (res.statusCode == 429) {
-          // Rate limit: wait and retry
-          await Future.delayed(Duration(seconds: delay));
-          delay *= 2; // exponential backoff
-          retryCount++;
         } else {
-          // Other HTTP errors
-          return "Error ${res.statusCode}: ${res.body}";
+          return "Unexpected response format from OpenAI.";
         }
-      } catch (e) {
-        // Network or parsing errors
-        return "Exception occurred: $e";
+      } else {
+        return "Error ${res.statusCode}: ${res.body}";
       }
+    } catch (e) {
+      return "Network error: $e";
     }
-
-    return "The AI service is busy. Please try again in a few seconds.";
   }
 
   @override
