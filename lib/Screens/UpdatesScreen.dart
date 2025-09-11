@@ -75,13 +75,13 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                 SizedBox(
                   width: 35,
                   height: 35,
-                  child: CircularProgressIndicator(
-                    value: progress, // dynamic progress
-                    strokeWidth: 3,
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(Colors.green),
-                    backgroundColor: Colors.white,
-                  ),
+                  // child: CircularProgressIndicator(
+                  //   value: progress, // dynamic progress
+                  //   strokeWidth: 3,
+                  //   valueColor:
+                  //       const AlwaysStoppedAnimation<Color>(Colors.green),
+                  //   backgroundColor: Colors.white,
+                  // ),
                 ),
                 Text(
                   "$learnedSDGs", // number of SDGs opened
