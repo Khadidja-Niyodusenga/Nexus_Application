@@ -4,9 +4,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:http/http.dart' as http;
-import 'package:openai_dart/openai_dart.dart' as openai;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:openai_dart/openai_dart.dart' hide Image;
+import 'Services/lesson_service.dart';
+import 'dart:async';
 
 class DetailsScreen extends StatefulWidget {
   final int sdgNumber;
@@ -19,6 +19,8 @@ class DetailsScreen extends StatefulWidget {
 }
 
 class _DetailsScreenState extends State<DetailsScreen> {
+  Timer? _readTimer;
+
   final _formKey = GlobalKey<FormState>();
   int responsesCount = 0;
   bool canRespond = true;
@@ -27,7 +29,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
   int _readMinutes = 0;
   final Map<String, TextEditingController> _controllers = {};
   bool _isSubmitting = false;
-  final client = OpenAIClient(apiKey: dotenv.env['OPENAI_API_KEY']!);
 
   String? _docId;
   Future<void> _initializeLesson() async {
@@ -71,6 +72,12 @@ class _DetailsScreenState extends State<DetailsScreen> {
         .where('userId', isEqualTo: user.uid)
         .where('sdgId', isEqualTo: docId)
         .get();
+
+    setState(() {
+      responsesCount = answersSnapshot.docs.length;
+      canRespond = answersSnapshot.docs.length < 2;
+      _hasCheckedResponses = true;
+    });
   }
 
   Future<String> analyzeWithAI({
@@ -104,8 +111,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
         {"role": "system", "content": "You are an SDG learning assistant."},
         {
           "role": "user",
-          // "content":
-          //     "Question: $question\nAnswer: $userResponse\nPlease provide friendly feedback in JSON format."
           "content":
               "Question: $question\nAnswer: $userResponse\nPlease provide friendly feedback (short and clear, no JSON)."
         }
@@ -140,6 +145,26 @@ class _DetailsScreenState extends State<DetailsScreen> {
     } catch (e) {
       return "Network error: $e";
     }
+  }
+
+  void _startReadTimer() {
+    _readTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      setState(() {
+        _readMinutes += 1;
+        print('readMinutes incremented to: $_readMinutes'); // Debug print
+      });
+    });
+  }
+
+  void _stopReadTimer() {
+    _readTimer?.cancel();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeLesson(); // already in your code
+    _startReadTimer(); // NEW: start counting read minutes
   }
 
   @override
@@ -324,7 +349,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                     onPressed: (!_isSubmitting && canRespond)
                         ? () async {
                             if (!_formKey.currentState!.validate()) {
-                              return; // ❌ stop if less than 20 chars
+                              return; // Stop if less than 20 chars
                             }
                             String answer = _controllers[docId]!.text.trim();
                             firebase_auth.User? user =
@@ -338,101 +363,192 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
                             final answersRef = FirebaseFirestore.instance
                                 .collection('answers');
-
-                            // Fetch existing answers
-                            final existingSnapshot = await answersRef
+                            final progressQuery = await FirebaseFirestore
+                                .instance
+                                .collection('progress')
                                 .where('userId', isEqualTo: user.uid)
-                                .where('sdgId', isEqualTo: docId)
+                                .limit(1)
                                 .get();
-
-                            if (existingSnapshot.docs.length < 2) {
-                              if (existingSnapshot.docs.isNotEmpty) {
-                                // Update the first existing answer
-                                final docIdToUpdate =
-                                    existingSnapshot.docs.first.id;
-                                await answersRef.doc(docIdToUpdate).update({
-                                  'response': answer,
-                                  'updatedAt': FieldValue.serverTimestamp(),
-                                });
-                              } else {
-                                // Add new answer
-                                await answersRef.add({
-                                  'userId': user.uid,
-                                  'sdgId': docId,
-                                  'response': answer,
-                                  'timestamp': FieldValue.serverTimestamp(),
-                                  'updatedAt': FieldValue.serverTimestamp(),
-                                });
-                              }
-
-                              // Call AI to analyze response
-                              String feedback = await analyzeWithAI(
-                                question: data['interactiveQuestion'],
-                                userResponse: answer,
-                              );
-
-                              // --- classify quality based on AI feedback ---
-                              String quality;
-                              if (feedback.toLowerCase().contains("good")) {
-                                quality = "good";
-                              } else if (feedback
-                                  .toLowerCase()
-                                  .contains("partial")) {
-                                quality = "partial";
-                              } else {
-                                quality = "poor";
-                              }
-
-                              // --- calculate dynamic percentage ---
-                              int percentage = calculatePercentage(
-                                opened: true,
-                                readMinutes: _readMinutes, // ✅ real time
-                                responded: true,
-                                quality: quality,
-                              );
-
-                              // --- save progress in Firestore ---
-                              final docRef = FirebaseFirestore.instance
+                            DocumentReference progressRef;
+                            if (progressQuery.docs.isEmpty) {
+                              progressRef = FirebaseFirestore.instance
                                   .collection('progress')
-                                  .doc(user.uid);
+                                  .doc();
+                            } else {
+                              progressRef = progressQuery.docs.first.reference;
+                            }
 
-                              await docRef.set({
-                                'userId': user.uid,
-                                'sdgs.$sdgId': {
-                                  'opened': true,
-                                  'readMinutes': _readMinutes, // ✅ real time
-                                  'responded': true,
-                                  'responseQuality': quality,
-                                  'percentage': percentage,
-                                  'updatedAt': FieldValue.serverTimestamp(),
+                            try {
+                              String feedback = '';
+                              String quality = 'none';
+                              bool submitted = false;
+
+                              await FirebaseFirestore.instance
+                                  .runTransaction((txn) async {
+                                // Fetch existing answers
+                                final existingSnapshot = await answersRef
+                                    .where('userId', isEqualTo: user.uid)
+                                    .where('sdgId', isEqualTo: docId)
+                                    .get();
+
+                                if (existingSnapshot.docs.length < 2) {
+                                  submitted = true;
+                                  if (existingSnapshot.docs.isNotEmpty) {
+                                    // Update the first existing answer
+                                    final docIdToUpdate =
+                                        existingSnapshot.docs.first.id;
+                                    txn.update(answersRef.doc(docIdToUpdate), {
+                                      'response': answer,
+                                      'updatedAt': FieldValue.serverTimestamp(),
+                                    });
+                                  } else {
+                                    // Add new answer
+                                    txn.set(answersRef.doc(), {
+                                      'userId': user.uid,
+                                      'sdgId': docId,
+                                      'response': answer,
+                                      'timestamp': FieldValue.serverTimestamp(),
+                                      'updatedAt': FieldValue.serverTimestamp(),
+                                    });
+                                  }
+
+                                  // Fetch progress data
+                                  final progressSnap = await progressRef.get();
+                                  final progressData = progressSnap.exists
+                                      ? progressSnap.data()
+                                          as Map<String, dynamic>
+                                      : {};
+                                  final sdgsMap = Map<String, dynamic>.from(
+                                      progressData['sdgs'] ?? {});
+                                  final sdgData = Map<String, dynamic>.from(
+                                      sdgsMap[widget.sdgNumber.toString()] ??
+                                          {
+                                            'opened': false,
+                                            'readCounted': false,
+                                            'readMinutes': 0,
+                                            'responded': false,
+                                            'responseQuality': 'none',
+                                            'percentage': 0,
+                                            'updatedAt':
+                                                FieldValue.serverTimestamp(),
+                                          });
+
+                                  // Call AI to analyze response
+                                  feedback = await analyzeWithAI(
+                                    question: data['interactiveQuestion'],
+                                    userResponse: answer,
+                                  );
+
+                                  // Classify quality
+                                  quality =
+                                      feedback.toLowerCase().contains("good")
+                                          ? "good"
+                                          : feedback
+                                                  .toLowerCase()
+                                                  .contains("partial")
+                                              ? "partial"
+                                              : "poor";
+
+                                  sdgData['opened'] = true;
+                                  sdgData['readCounted'] = true;
+                                  sdgData['readMinutes'] = _readMinutes;
+                                  sdgData['responded'] = true;
+                                  sdgData['responseQuality'] = quality;
+                                  sdgData['percentage'] = calculatePercentage(
+                                    opened: true,
+                                    readMinutes: _readMinutes,
+                                    responded: true,
+                                    quality: quality,
+                                  );
+                                  sdgData['updatedAt'] =
+                                      FieldValue.serverTimestamp();
+                                  sdgsMap[widget.sdgNumber.toString()] =
+                                      sdgData;
+
+                                  txn.set(
+                                    progressRef,
+                                    {
+                                      'userId': user.uid,
+                                      'sdgs': sdgsMap,
+                                    },
+                                    SetOptions(merge: true),
+                                  );
                                 }
-                              }, SetOptions(merge: true));
+                              });
 
-                              // --- show feedback to user ---
+                              if (submitted) {
+                                // Update lesson counts using LessonService
+                                await LessonService.updateLessonCounts(
+                                  sdgNumber: widget.sdgNumber,
+                                  userId: user.uid,
+                                  newQuality: quality,
+                                  responded: true,
+                                  readMinutes: _readMinutes,
+                                );
+
+                                if (!mounted) return;
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text("Feedback"),
+                                    content: Text(feedback),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                          _showThankYouDialog();
+                                        },
+                                        child: const Text("OK"),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                _controllers[docId]!.clear();
+                                await _checkResponses(docId);
+                                _stopReadTimer();
+                              } else {
+                                if (!mounted) return;
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text("Response Limit Reached"),
+                                    content: const Text(
+                                        "You have already submitted the maximum number of responses (2)."),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text("OK"),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+
+                              setState(() {
+                                _isSubmitting = false;
+                              });
+                            } catch (e) {
+                              print('Error in DetailsScreen onPressed: $e');
                               if (!mounted) return;
                               showDialog(
                                 context: context,
                                 builder: (context) => AlertDialog(
-                                  title: const Text("Feedback"),
-                                  content: Text(feedback),
+                                  title: const Text("Error"),
+                                  content: const Text(
+                                      "Failed to submit answer. Please try again."),
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.pop(context),
                                       child: const Text("OK"),
-                                    )
+                                    ),
                                   ],
                                 ),
                               );
-
-                              _controllers[docId]!.clear();
+                              setState(() {
+                                _isSubmitting = false;
+                              });
                             }
-
-                            // Refresh responses count
-                            await _checkResponses(docId);
-
-                            setState(() {
-                              _isSubmitting = false;
-                            });
                           }
                         : null,
                     child: Text(_isSubmitting ? "Submitting..." : "Submit"),
@@ -444,6 +560,13 @@ class _DetailsScreenState extends State<DetailsScreen> {
         },
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _readTimer?.cancel(); // stop timer
+    _controllers.forEach((key, controller) => controller.dispose());
+    super.dispose();
   }
 }
 
