@@ -4,6 +4,7 @@ import 'DetailsScreen.dart'; // import your DetailsScreen
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'LoginScreen.dart';
+import 'Services/user_service.dart';
 
 class LearnScreen extends StatefulWidget {
   const LearnScreen({super.key});
@@ -180,6 +181,7 @@ class _LearnScreenState extends State<LearnScreen> {
                               );
                               return;
                             }
+                            await UserService.updateLastActive(user.uid);
                             final firestore = FirebaseFirestore.instance;
                             final sdgId = (index + 1).toString();
 

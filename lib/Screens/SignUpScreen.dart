@@ -6,6 +6,7 @@ import 'dashboard_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'Services/user_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -77,7 +78,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'lastLogin': FieldValue.serverTimestamp(),
+        'lastActive': FieldValue.serverTimestamp(), // NEW
       });
+      await UserService.updateLastActive(userCred.user!.uid);
 
       _showMessage("Account created successfully!");
       Navigator.pushReplacement(
@@ -149,6 +152,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
           'lastLogin': FieldValue.serverTimestamp(),
+          'lastActive': FieldValue.serverTimestamp(), // NEW
         });
       } else {
         // if returning user, update their lastLogin + updatedAt
@@ -158,7 +162,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             .update({
           'lastLogin': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
+          'lastActive': FieldValue.serverTimestamp(), // NEW
         });
+        await UserService.updateLastActive(user.uid);
       }
 
       _showMessage("Google sign-in successful!");

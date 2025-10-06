@@ -6,6 +6,7 @@ import 'SignUpScreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'Services/user_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -65,44 +66,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Future<void> _loginWithEmail() async {
-  //   String email = _emailController.text.trim();
-  //   String password = _passwordController.text.trim();
-
-  //   if (email.isEmpty || password.isEmpty) {
-  //     _showMessage("Please enter email and password");
-  //     return;
-  //   }
-
-  //   setState(() => _loading = true);
-
-  //   try {
-  //     // Attempt sign-in with email & password directly
-  //     UserCredential userCredential = await FirebaseAuth.instance
-  //         .signInWithEmailAndPassword(email: email, password: password);
-
-  //     if (userCredential.user != null) {
-  //       Navigator.pushReplacement(
-  //         context,
-  //         MaterialPageRoute(builder: (_) => const DashboardScreen()),
-  //       );
-  //     }
-  //   } on FirebaseAuthException catch (e) {
-  //     if (e.code == 'user-not-found') {
-  //       _showMessage("No account found with this email. Please sign up first.");
-  //     } else if (e.code == 'wrong-password') {
-  //       _showMessage("Wrong password. Try again.");
-  //     } else if (e.code == 'account-exists-with-different-credential') {
-  //       _showMessage(
-  //           "This email is registered with another method. Please use that to sign in.");
-  //     } else {
-  //       _showMessage(e.message ?? "Login failed");
-  //     }
-  //   } finally {
-  //     setState(() => _loading = false);
-  //   }
-  // }
-
   Future<void> _loginWithEmail() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
@@ -139,12 +102,16 @@ class _LoginScreenState extends State<LoginScreen> {
             'role': 'user',
             'createdAt': FieldValue.serverTimestamp(),
             'lastLogin': FieldValue.serverTimestamp(),
+            'lastActive': FieldValue.serverTimestamp(), // NEW
           });
         } else {
           // Returning user → update lastLogin only
           await userDocRef.update({
             'lastLogin': FieldValue.serverTimestamp(),
+            'lastActive': FieldValue.serverTimestamp(), // NEW
+            'updatedAt': FieldValue.serverTimestamp(),
           });
+          await UserService.updateLastActive(user.uid);
         }
 
         // Navigate to Dashboard after login
@@ -232,13 +199,17 @@ class _LoginScreenState extends State<LoginScreen> {
             'role': 'user',
             'createdAt': FieldValue.serverTimestamp(), // stored once
             'lastLogin': FieldValue.serverTimestamp(),
+            'lastActive': FieldValue.serverTimestamp(), // NEW
             'updatedAt': FieldValue.serverTimestamp(),
           });
         } else {
           // Returning user → update lastLogin & updatedAt only
           await userDocRef.update({
             'lastLogin': FieldValue.serverTimestamp(), // updated each login
+            'lastActive': FieldValue.serverTimestamp(), // NEW
+            'updatedAt': FieldValue.serverTimestamp(),
           });
+          await UserService.updateLastActive(user.uid);
         }
       }
 
