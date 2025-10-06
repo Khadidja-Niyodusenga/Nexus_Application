@@ -98,10 +98,16 @@ class _LearnScreenState extends State<LearnScreen> {
                   });
 
                   final total = allSdgs.fold(0.0, (sum, e) => sum + e);
-                  average = allSdgs.isNotEmpty ? (total / allSdgs.length) : 0.0;
-                }
+                  //   average = allSdgs.isNotEmpty ? (total / allSdgs.length) : 0.0;
+                  // }
 
-                int percentage = (average * 100).toInt();
+                  // int percentage = (average * 100).toInt();
+
+                  average = allSdgs.isNotEmpty
+                      ? (total / allSdgs.length).clamp(0.0, 1.0)
+                      : 0.0;
+                }
+                int percentage = (average * 100).round();
 
                 return Scaffold(
                   appBar: AppBar(
@@ -140,7 +146,7 @@ class _LearnScreenState extends State<LearnScreen> {
                               ),
                             ),
                             Text(
-                              "$percentage%",
+                              "",
                               style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
