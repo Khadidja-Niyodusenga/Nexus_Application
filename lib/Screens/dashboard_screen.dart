@@ -7,7 +7,7 @@ import 'LearnScreen.dart';
 import 'UpdatesScreen.dart';
 import 'ProfileScreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-//import 'auth_service.dart';
+
 import 'package:google_sign_in/google_sign_in.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -252,7 +252,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       Center(
                         child: Text(
-                          "Second text: Promoting sustainable development and protecting the environment worldwide.",
+                          "Promoting sustainable development and protecting the environment worldwide.",
                           style: TextStyle(
                               fontSize: 16, fontFamily: 'Times New Roman'),
                           textAlign: TextAlign.center,
@@ -260,7 +260,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       Center(
                         child: Text(
-                          "Third text: Fostering international cooperation to solve global challenges together.",
+                          "Fostering international cooperation to solve global challenges together.",
                           style: TextStyle(
                               fontSize: 16, fontFamily: 'Times New Roman'),
                           textAlign: TextAlign.center,
@@ -298,9 +298,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              Image.asset(
-                'assets/logounarwanda.jpg',
-                height: 80,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Left logo
+                  Image.asset(
+                    'assets/unlogo.png', // replace with your left logo path
+                    height: 80,
+                  ),
+                  const SizedBox(width: 20), // spacing between logos
+                  // Center logo (original one)
+                  Image.asset(
+                    'assets/wfunalogo.png',
+                    height: 80,
+                  ),
+                  const SizedBox(width: 20), // spacing
+                  // Right logo
+                  Image.asset(
+                    'assets/logounarwanda.jpg', // replace with your right logo path
+                    height: 80,
+                  ),
+                ],
               ),
             ],
           ),

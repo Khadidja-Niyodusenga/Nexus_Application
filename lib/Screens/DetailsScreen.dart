@@ -8,6 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'Services/lesson_service.dart';
 import 'dart:async';
 import 'Services/user_service.dart';
+import 'package:flutter/services.dart';
 
 class DetailsScreen extends StatefulWidget {
   final int sdgNumber;
@@ -293,81 +294,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       })()
                     : const Icon(Icons.image, size: 100, color: Colors.grey),
                 const SizedBox(height: 12),
-                // SelectableText(
-                //   data['title'] ?? '',
-                //   style: const TextStyle(
-                //       fontSize: 20, fontWeight: FontWeight.bold),
-                // ),
-                // const SizedBox(height: 8),
-                // SelectableText(
-                //   data['description'] ?? '',
-                //   style: const TextStyle(fontSize: 16),
-                //   textAlign: TextAlign.left,
-                // ),
-                // const SizedBox(height: 12),
-                // if (data['activities'] != null && data['activities'] is List)
-                //   Column(
-                //     crossAxisAlignment: CrossAxisAlignment.start,
-                //     children: [
-                //       const Text(
-                //         "Activities:",
-                //         style: TextStyle(
-                //           fontSize: 20,
-                //           fontWeight: FontWeight.bold,
-                //           fontStyle: FontStyle.normal,
-                //         ),
-                //       ),
-                //       const SizedBox(height: 4),
-                //       ...List<Widget>.generate(
-                //         (data['activities'] as List).length,
-                //         (index) {
-                //           String activity = (data['activities'] as List)[index];
-                //           List<String> parts = activity
-                //               .split(RegExp(r'\s*:\s*', caseSensitive: false));
-                //           String title = parts.isNotEmpty ? parts[0] : '';
-                //           String description = parts.length > 1
-                //               ? parts.sublist(1).join(': ')
-                //               : '';
-
-                //           return Padding(
-                //             padding: const EdgeInsets.symmetric(vertical: 2),
-                //             child: SelectableText.rich(
-                //               TextSpan(
-                //                 style: const TextStyle(
-                //                   fontSize: 15,
-                //                   height: 1.5,
-                //                   fontStyle: FontStyle.normal,
-                //                   color: Colors.black,
-                //                 ),
-                //                 children: [
-                //                   TextSpan(
-                //                     text: "${index + 1}. $title: ",
-                //                     style: const TextStyle(
-                //                         fontWeight: FontWeight.bold),
-                //                   ),
-                //                   TextSpan(
-                //                     text: description,
-                //                     style: const TextStyle(
-                //                         fontWeight: FontWeight.normal),
-                //                   ),
-                //                 ],
-                //               ),
-                //               textAlign: TextAlign.left,
-                //             ),
-                //                                       );
-                //         },
-                //       ),
-                //     ],
-                //   ),
-                // const SizedBox(height: 16),
-                // if (data['interactiveQuestion'] != null) ...[
-                //   SelectableText(
-                //     data['interactiveQuestion'],
-                //     style: const TextStyle(
-                //         fontSize: 16, fontWeight: FontWeight.bold),
-                //   ),
-                //   const SizedBox(height: 8),
-
                 SelectableText.rich(
                   TextSpan(
                     style: const TextStyle(
@@ -452,6 +378,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       border: OutlineInputBorder(),
                     ),
                     maxLines: 3,
+                    inputFormatters: [
+                      // Allow only letters (a–z, A–Z), digits (0–9), and spaces
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'[a-zA-Z0-9\s]')),
+                    ],
                     validator: (value) {
                       if (value == null || value.trim().length < 20) {
                         return "Answer must be at least 20 characters.";

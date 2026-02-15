@@ -76,14 +76,6 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                   width: 35,
                   height: 35,
                 ),
-                // Text(
-                //   "$learnedSDGs", // number of SDGs opened
-                //   style: const TextStyle(
-                //     fontSize: 12,
-                //     fontWeight: FontWeight.bold,
-                //     color: Colors.black,
-                //   ),
-                // ),
               ],
             ),
           ),

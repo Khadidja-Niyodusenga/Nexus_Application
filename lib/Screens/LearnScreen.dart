@@ -64,23 +64,19 @@ class _LearnScreenState extends State<LearnScreen> {
                   .snapshots(),
               builder: (context, snapshot) {
                 double average = 0.0;
-
                 if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                  final data =
+                  final docData =
                       snapshot.data!.docs.first.data() as Map<String, dynamic>;
-                  final sdgs = <String, dynamic>{};
-                  for (var i = 1; i <= 17; i++) {
-                    final key = i.toString();
-                    if (data.containsKey(key)) {
-                      sdgs[i.toString()] = data[key];
-                    }
-                  }
 
+                  // ✅ Access the 'sdgs' map just like in TrackProgressScreen
+                  final sdgs = Map<String, dynamic>.from(docData['sdgs'] ?? {});
+
+                  // ✅ Generate all 17 SDGs
                   final allSdgs = List.generate(17, (index) {
                     final id = (index + 1).toString();
                     final sdgData = sdgs[id] != null && sdgs[id] is Map
                         ? Map<String, dynamic>.from(sdgs[id] as Map)
-                        : <String, dynamic>{};
+                        : {};
 
                     final rawPercentage = sdgData['percentage'] ?? 0;
                     double percent = 0.0;
@@ -90,24 +86,18 @@ class _LearnScreenState extends State<LearnScreen> {
                     } else if (rawPercentage is double) {
                       percent = rawPercentage / 100;
                     } else if (rawPercentage is String) {
-                      percent = double.tryParse(rawPercentage) != null
-                          ? double.parse(rawPercentage) / 100
-                          : 0.0;
+                      percent = double.tryParse(rawPercentage) ?? 0.0;
+                      percent = percent / 100;
                     }
 
                     return percent;
                   });
 
+                  // ✅ Compute average exactly like TrackProgressScreen
                   final total = allSdgs.fold(0.0, (sum, e) => sum + e);
-                  //   average = allSdgs.isNotEmpty ? (total / allSdgs.length) : 0.0;
-                  // }
-
-                  // int percentage = (average * 100).toInt();
-
-                  average = allSdgs.isNotEmpty
-                      ? (total / allSdgs.length).clamp(0.0, 1.0)
-                      : 0.0;
+                  average = allSdgs.isNotEmpty ? (total / allSdgs.length) : 0.0;
                 }
+
                 int percentage = (average * 100).round();
 
                 return Scaffold(
@@ -147,7 +137,7 @@ class _LearnScreenState extends State<LearnScreen> {
                               ),
                             ),
                             Text(
-                              "",
+                              "$percentage%",
                               style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,

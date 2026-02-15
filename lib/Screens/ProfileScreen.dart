@@ -304,6 +304,8 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
   late TextEditingController _addressController;
   late TextEditingController _telephoneController;
   late TextEditingController _emailController;
+  final _formKey = GlobalKey<FormState>();
+
   File? _newImageFile;
   bool _saving = false;
 
@@ -467,14 +469,61 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
                 }),
               ),
               const SizedBox(height: 20),
-              _buildTextField("Names", _namesController),
-              const SizedBox(height: 15),
-              _buildTextField("Address", _addressController),
-              const SizedBox(height: 15),
-              _buildTextField("Telephone", _telephoneController),
-              const SizedBox(height: 15),
-              _buildTextField("Email", _emailController),
-              const SizedBox(height: 25),
+              Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildTextField("Names", _namesController,
+                        validator: (value) {
+                      if (value == null || value.trim().isEmpty)
+                        return "Please enter your name.";
+                      if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value))
+                        return "Names can only contain letters and spaces.";
+                      return null;
+                    }),
+                    const SizedBox(height: 15),
+                    _buildTextField("Address", _addressController,
+                        validator: (value) {
+                      if (value == null || value.trim().isEmpty)
+                        return "Please enter your address.";
+                      if (!RegExp(r'^[a-zA-Z0-9\s.,-]+$').hasMatch(value))
+                        return "Address must be alphanumeric.";
+                      return null;
+                    }),
+                    const SizedBox(height: 15),
+                    _buildTextField(
+                      "Telephone",
+                      _telephoneController,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return "Please enter your phone number.";
+                        }
+                        // Regex explanation:
+                        // ^0(78|72|73|75|76|70|71|79)\d{7}$  |75|76|70|71|79
+                        // ^0       -> starts with 0
+                        // (78|72|...) -> allowed prefixes
+                        // \d{7}$  -> followed by exactly 7 digits (total 10 digits)
+                        if (!RegExp(r'^0(78|72|73)\d{7}$').hasMatch(value)) {
+                          return "Telephone must be 10 digits start with 078/072/073";
+                        }
+                        return null;
+                      },
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 15),
+                    _buildTextField("Email", _emailController,
+                        validator: (value) {
+                      if (value == null || value.trim().isEmpty)
+                        return "Please enter your email.";
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                          .hasMatch(value)) return "Invalid email format.";
+                      return null;
+                    }, keyboardType: TextInputType.emailAddress),
+                    const SizedBox(height: 25),
+                  ],
+                ),
+              ),
               if (_saving) const CircularProgressIndicator(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -489,29 +538,31 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
                   ),
                   ElevatedButton(
                     onPressed: () async {
-                      setState(() => _saving = true);
+                      if (_formKey.currentState!.validate()) {
+                        // Only proceed if valid
+                        setState(() => _saving = true);
 
-                      String profilePicBase64 = widget.profilePicBase64;
+                        String profilePicBase64 = widget.profilePicBase64;
+                        if (_newImageFile != null) {
+                          profilePicBase64 =
+                              await _convertToDataUrl(_newImageFile!);
+                        }
 
-                      if (_newImageFile != null) {
-                        profilePicBase64 =
-                            await _convertToDataUrl(_newImageFile!);
+                        await FirebaseFirestore.instance
+                            .collection('normal_users')
+                            .doc(widget.user.uid)
+                            .update({
+                          'name': _namesController.text.trim(),
+                          'address': _addressController.text.trim(),
+                          'phone': _telephoneController.text.trim(),
+                          'email': _emailController.text.trim(),
+                          'profilePicture': profilePicBase64,
+                          'updatedAt': FieldValue.serverTimestamp(),
+                        });
+
+                        setState(() => _saving = false);
+                        Navigator.of(context).pop();
                       }
-
-                      await FirebaseFirestore.instance
-                          .collection('normal_users')
-                          .doc(widget.user.uid)
-                          .update({
-                        'name': _namesController.text,
-                        'address': _addressController.text,
-                        'phone': _telephoneController.text,
-                        'email': _emailController.text,
-                        'profilePicture': profilePicBase64,
-                        'updatedAt': FieldValue.serverTimestamp(),
-                      });
-
-                      setState(() => _saving = false);
-                      Navigator.of(context).pop();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
@@ -528,14 +579,21 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller) {
-    return TextField(
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    String? Function(String?)? validator,
+    TextInputType? keyboardType,
+  }) {
+    return TextFormField(
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       ),
       textInputAction: TextInputAction.next,
+      validator: validator,
+      keyboardType: keyboardType,
     );
   }
 }
